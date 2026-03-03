@@ -1,0 +1,40 @@
+==========================================================
+        MANUAL DE SOBREVIVÊNCIA: TERMINAL WASTELAND
+==========================================================
+
+Bem-vindo à Rede Secundária, Recruta. Siga estas instruções
+para garantir que sua sucata não termine nas mãos de rivais.
+
+1. COMANDOS INICIAIS
+--------------------
+- registrar <nome> <senha> : Cria sua conta (Ganha Kit Inicial).
+- login <nome> <senha>     : Conecta ao seu traje de exploração.
+- status                   : Mostra Vida, Energia e Inventário.
+- ajuda                    : Lista todos os comandos disponíveis.
+
+2. EXPLORAÇÃO E SOBREVIVÊNCIA
+-----------------------------
+- norte, sul, leste, oeste : Movimenta seu traje pelo mapa.
+- explorar                 : Busca recursos (Custa 5 Energia).
+- atacar                   : Inicia combate com monstros locais.
+- usar agua_pura           : Recupera HP e Energia rapidamente.
+
+3. CONSTRUÇÃO E ECONOMIA
+------------------------
+- mercado                  : Abre a loja de trocas da Zona Morta.
+- construir base           : Cria um abrigo (Custo: 50 suc, 10 circ).
+- base status              : Verifica o cofre e defesas da sua base.
+- base depositar <qtd>     : Guarda sua sucata em segurança.
+- defender                 : Instala torretas (Custa 30 suc, 5 circ).
+
+4. GUERRA E EQUIPAMENTO
+-----------------------
+- craft faca               : Melhora seu ataque básico.
+- craft bomba              : Cria explosivos para invasões.
+- invadir                  : Tenta saquear uma base inimiga no local.
+- viajar <mundo>           : Muda de bioma (Ex: world_002 - Nível 5+).
+
+DICA DE SOBREVIVÊNCIA:
+Sempre mantenha sua base defendida. Se um inimigo usar uma 
+bomba contra você, apenas suas torretas podem salvar seu cofre!
+==========================================================
