@@ -2,6 +2,7 @@ const ascii = require('./asciiLibrary');
 const Base = require('../models/Base');
 const Player = require('../models/Player');
 const Market = require('../models/Market');
+const Clan = require('../models/Clan');
 
 const parser = {
     process: async (player, command, args, io) => {
@@ -28,6 +29,17 @@ const parser = {
                     player.inventory.metal_base += 5;
                     player.combatState.inCombat = false;
                     player.combatState.enemyId = null;
+
+                if (player.quest && player.quest.active && player.quest.targetId === enemyKey) {
+                        player.quest.progress += 1;
+                        responseText += `\x1b[36m[MISSÃO] Progresso: ${player.quest.progress}/${player.quest.goal}\x1b[0m\n`;
+                        
+                        if (player.quest.progress >= player.quest.goal) {
+                            player.inventory.circuitos += player.quest.rewardCirc;
+                            responseText += `\x1b[1;32m[MISSÃO CONCLUÍDA!] O Terminal transferiu ${player.quest.rewardCirc}x circuitos para ti.\x1b[0m\n`;
+                            player.quest.active = false; // Reseta a missão
+                        }
+                    }
 
                     if (player.status.xp >= player.status.nextLevelXp) {
                         player.status.level += 1;
@@ -104,7 +116,33 @@ const parser = {
                     "clan / limpar / gritar- Comandos sociais e de sistema",
                     "mercado livre         - Vê os itens vendidos por outros jogadores",
                     "vender [item] [qtd] [preço] - Coloca um item à venda no mercado",
+                    "missoes               - Vê ou pede um contrato de caça"
                 ]);
+                break;
+
+            // ==========================================
+            // SISTEMA DE CONTRATOS (MISSÕES)
+            // ==========================================
+            case 'missoes':
+                if (!player.quest || !player.quest.active) {
+                   
+                    const targets = ['rat_mutante', 'escorpiao', 'saqueador'];
+                    const tId = targets[Math.floor(Math.random() * targets.length)];
+                    const tName = ascii.enemies[tId].name;
+                    const req = Math.floor(Math.random() * 3) + 3; 
+                    const rew = Math.floor(Math.random() * 3) + 1; 
+                    
+                    player.quest = { active: true, targetId: tId, targetName: tName, goal: req, progress: 0, rewardCirc: rew };
+                    responseText = `\x1b[1;33m[NOVA MISSÃO EMITIDA]\x1b[0m\nO Mainframe precisa que elimines \x1b[31m${req}x ${tName}\x1b[0m.\nRecompensa: ${rew}x circuitos.`;
+                } else {
+                    responseText = ascii.drawBox("CONTRATO ATIVO", [
+                        `Alvo a Abater : ${player.quest.targetName}`,
+                        `Progresso     : ${player.quest.progress} / ${player.quest.goal}`,
+                        `Recompensa    : ${player.quest.rewardCirc}x circuitos`,
+                        `---------------------------------------`,
+                        `Vai explorar para encontrares o teu alvo!`
+                    ]);
+                }
                 break;
 
             case 'status':
@@ -293,36 +331,64 @@ const parser = {
                 }
                 break;
 
+            // ==========================================
+            // SISTEMA DE CLÃS E COFRE
+            // ==========================================
             case 'clan':
                 const acaoClan = args[1];
                 const nomeClan = args.slice(2).join(' ');
 
                 if (acaoClan === 'criar') {
-                    if (!nomeClan) {
-                        responseText = `[USO] clan criar <Nome do Clã>`;
-                    } else if (player.clan) {
-                        responseText = `\x1b[31m[ERRO] Você já pertence ao clã [${player.clan}].\x1b[0m`;
-                    } else if (player.inventory.circuitos < 5) {
-                        responseText = `\x1b[31m[ERRO] Criar um registro de Clã custa 5x circuitos.\x1b[0m`;
-                    } else {
-                        player.inventory.circuitos -= 5;
-                        player.clan = nomeClan;
-                        responseText = `\x1b[32m[FACÇÃO] Sucesso! Você fundou o clã [${nomeClan}].\x1b[0m`;
-                        io.emit('output', `\r\n\x1b[1;35m[NOTÍCIA MUNDIAL] A facção [${nomeClan}] foi fundada por ${player.username}!\x1b[0m\r\n> `);
-                    }
+                    if (!nomeClan) return { text: `[USO] clan criar <Nome do Clã>`, playerData: player };
+                    if (player.clan) return { text: `\x1b[31m[ERRO] Já pertences a um clã.\x1b[0m`, playerData: player };
+                    if (player.inventory.circuitos < 5) return { text: `\x1b[31m[ERRO] Custa 5 circuitos registar um Clã.\x1b[0m`, playerData: player };
+                    
+                    const clanExiste = await Clan.findOne({ name: new RegExp('^' + nomeClan + '$', 'i') });
+                    if (clanExiste) return { text: `\x1b[31m[ERRO] Esse nome já está em uso.\x1b[0m`, playerData: player };
+
+                    player.inventory.circuitos -= 5;
+                    player.clan = nomeClan;
+                    await new Clan({ name: nomeClan, founder: player.username }).save();
+                    responseText = `\x1b[32m[FACÇÃO] Sucesso! Fundaste o clã [${nomeClan}].\x1b[0m`;
+                    io.emit('output', `\r\n\x1b[1;35m[NOTÍCIA MUNDIAL] A facção [${nomeClan}] foi fundada por ${player.username}!\x1b[0m\r\n> `);
                 } 
                 else if (acaoClan === 'juntar') {
-                    if (!nomeClan) {
-                        responseText = `[USO] clan juntar <Nome do Clã>`;
-                    } else if (player.clan) {
-                        responseText = `\x1b[31m[ERRO] Você já pertence ao clã [${player.clan}].\x1b[0m`;
-                    } else {
-                        player.clan = nomeClan;
-                        responseText = `\x1b[32m[FACÇÃO] Você se juntou ao clã [${nomeClan}].\x1b[0m`;
+                    if (!nomeClan) return { text: `[USO] clan juntar <Nome>`, playerData: player };
+                    if (player.clan) return { text: `\x1b[31m[ERRO] Já pertences a um clã.\x1b[0m`, playerData: player };
+                    
+                    const clanAlvo = await Clan.findOne({ name: new RegExp('^' + nomeClan + '$', 'i') });
+                    if (!clanAlvo) return { text: `\x1b[31m[ERRO] O clã '${nomeClan}' não existe.\x1b[0m`, playerData: player };
+
+                    player.clan = clanAlvo.name;
+                    responseText = `\x1b[32m[FACÇÃO] Foste aceite no clã [${clanAlvo.name}].\x1b[0m`;
+                }
+                else if (acaoClan === 'status') {
+                    if (!player.clan) return { text: `\x1b[31m[ERRO] Não tens clã.\x1b[0m`, playerData: player };
+                    const meuClan = await Clan.findOne({ name: player.clan });
+                    if (meuClan) {
+                        responseText = ascii.drawBox(`COFRE DA FACÇÃO: ${meuClan.name}`, [
+                            `Fundador: ${meuClan.founder}`,
+                            `-------------------------------------`,
+                            `Sucata (metal_base): ${meuClan.inventory.metal_base}`,
+                            `Circuitos          : ${meuClan.inventory.circuitos}`
+                        ]);
                     }
                 }
+                else if (acaoClan === 'depositar') {
+                    const itemDep = args[2];
+                    const qtdDep = parseInt(args[3]);
+                    if (!player.clan) return { text: `\x1b[31m[ERRO] Não tens clã.\x1b[0m`, playerData: player };
+                    if (!itemDep || !qtdDep || qtdDep <= 0) return { text: `[USO] clan depositar metal_base 100`, playerData: player };
+                    if (player.inventory[itemDep] === undefined || player.inventory[itemDep] < qtdDep) return { text: `\x1b[31m[ERRO] Não tens ${qtdDep}x ${itemDep}.\x1b[0m`, playerData: player };
+
+                    const meuClan = await Clan.findOne({ name: player.clan });
+                    player.inventory[itemDep] -= qtdDep;
+                    meuClan.inventory[itemDep] += qtdDep;
+                    await meuClan.save();
+                    responseText = `\x1b[32m[COFRE DO CLÃ] Depositaste ${qtdDep}x ${itemDep} para a tua facção!\x1b[0m`;
+                }
                 else {
-                    responseText = `[COMANDOS DE CLÃ]\nclan criar <Nome> - Funda uma facção (Custa 5 circuitos)\nclan juntar <Nome> - Entra em uma facção existente\nSua facção atual: ${player.clan || 'Nenhuma'}`;
+                    responseText = `[COMANDOS DE CLÃ]\nclan criar <Nome> - Funda facção (5 circ)\nclan juntar <Nome> - Entra noutra facção\nclan status - Vê o cofre do clã\nclan depositar <item> <qtd> - Ajuda a tua equipa!`;
                 }
                 break;
 

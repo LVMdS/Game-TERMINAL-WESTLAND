@@ -27,6 +27,14 @@ const PlayerSchema = new mongoose.Schema({
         nucleo_energia: {type: Number, default: 0},
         items: [] 
     },
+    quest: {
+        active: { type: Boolean, default: false },
+        targetId: { type: String, default: null },
+        targetName: { type: String, default: "" },
+        goal: { type: Number, default: 0 },
+        progress: { type: Number, default: 0 },
+        rewardCirc: { type: Number, default: 0 }
+    },
     equipment: {
         weapon: { 
             name: { type: String, default: "Cano enferrujado" }, 
