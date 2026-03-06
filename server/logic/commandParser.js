@@ -14,14 +14,12 @@ const parser = {
             const enemy = ascii.enemies[enemyKey];
 
             if (command === 'atacar') {
-                
                 const seuDano = player.equipment.weapon.atk + Math.floor(Math.random() * 4);
                 player.combatState.enemyHp -= seuDano;
                 responseText = `\x1b[33m[COMBATE] Você ataca com ${player.equipment.weapon.name} e causa ${seuDano} de dano!\x1b[0m\n`;
 
                 if (player.combatState.enemyHp <= 0) {
-                    
-                  const xpGanha = enemy.xpReward || 20;
+                    const xpGanha = enemy.xpReward || 20;
                     player.status.xp += xpGanha;
                     
                     responseText += `\x1b[32m[VITÓRIA] O ${enemy.name} foi destruído!\x1b[0m\n`;
@@ -30,7 +28,6 @@ const parser = {
                     player.combatState.inCombat = false;
                     player.combatState.enemyId = null;
 
-                 
                     if (player.status.xp >= player.status.nextLevelXp) {
                         player.status.level += 1;
                         player.status.xp -= player.status.nextLevelXp;
@@ -44,7 +41,6 @@ const parser = {
                         responseText += `\x1b[33mVocê alcançou o NÍVEL ${player.status.level}! HP Máximo: ${player.status.maxHp} | Energia Máxima: ${player.status.maxEnergy}\x1b[0m\n`;
                     }
                 } else {
-                   
                     const danoInimigo = Math.max(0, enemy.atk - player.equipment.armor.def + Math.floor(Math.random() * 3));
                     player.status.hp -= danoInimigo;
                     responseText += `\x1b[31m[COMBATE] O ${enemy.name} revida e causa ${danoInimigo} de dano!\x1b[0m\n`;
@@ -79,13 +75,12 @@ const parser = {
         // MODO LIVRE (Exploração, Crafting, Movimento)
         // ==========================================
         switch(command) {
-          case 'online':
-    
+            case 'online':
                 const playersOnline = await Player.find({ socketId: { $ne: null } });
                 let lista = playersOnline.map(p => `• ${p.username} (Nível ${p.status.level})`).join('\n');
                 responseText = ascii.drawBox("SOBREVIVENTES ONLINE", [lista || "Ninguém online no momento."]);
                 break;
-          case 'ajuda':
+            case 'ajuda':
                 responseText = ascii.drawBox("COMANDOS DO SISTEMA", [
                     "status                - Exibe atributos, nível e inventário",
                     "mapa                  - Exibe o radar local e bases",
@@ -95,7 +90,7 @@ const parser = {
                     "comprar [item]        - Adquire um item do mercado",
                     "usar [item]           - Consome um item",
                     "reciclar              - Transforma 5 sucata em 1 circuito",
-                    "craft [item]          - Forja itens (ex: craft faca, craft bomba)",,
+                    "craft [item]          - Forja itens (ex: craft faca, craft bomba)",
                     "construir base        - Cria zona segura (50 suc, 10 circ)",
                     "defender              - Instala torretas na base (Custa 30 suc, 5 circ)",
                     "viajar [world_001/2]  - Viaja entre mapas (world_002 exige Lvl 5)",
@@ -110,7 +105,6 @@ const parser = {
                 break;
 
             case 'status':
-    
                 const statusLines = [
                     `Nível: ${player.status.level}  |  XP: ${player.status.xp}`,
                     `HP: ${player.status.hp}/100  |  Energia: ${player.status.energy}/100`,
@@ -124,10 +118,10 @@ const parser = {
                     `-------------------------------------------`,
                     `EQUIPAMENTO ESPECIAL:`,
                     `> Bombas Caseiras    : ${player.inventory.bombas || 0} unit.`, 
+                    `> Núcleo de Energia  : ${player.inventory.nucleo_energia || 0} unit.`, // ADICIONADO AQUI
                     `-------------------------------------------`,
                     `CLÃ: ${player.clan || 'Sem afiliação'}`
                 ];
-
                 responseText = ascii.drawBox(`STATUS DE ${player.username.toUpperCase()}`, statusLines);
                 break;
             
@@ -150,7 +144,8 @@ const parser = {
                     responseText = `[USO] Digite 'construir base'`;
                 }
                 break;
-                case 'base':
+                
+            case 'base':
                 const acaoBase = args[1];
                 const qtd = parseInt(args[2]);
                 const minhaBase = await Base.findOne({ x: player.location.x, y: player.location.y });
@@ -186,9 +181,7 @@ const parser = {
                     responseText = `[USO] base status | base depositar [qtd] | base sacar [qtd]`;
                 }
                 break;
-            // ==========================================
-            // SISTEMA DE DEFESA DE BASE
-            // ==========================================
+
             case 'defender':
                 const baseDef = await Base.findOne({ x: player.location.x, y: player.location.y, owner: player.username });
                 if (!baseDef) {
@@ -206,9 +199,6 @@ const parser = {
                 }
                 break;
 
-            // ==========================================
-            // SISTEMA DE VIAGEM (NOVOS BIOMAS)
-            // ==========================================
             case 'viajar':
                 const destino = args[1]; 
                 if (destino === 'world_001' || destino === 'world_002') {
@@ -225,9 +215,6 @@ const parser = {
                 }
                 break;
 
-            // ==========================================
-            // RANKING GLOBAL (LEADERBOARD)
-            // ==========================================
             case 'ranking':
                 const topPlayers = await Player.find().sort({ "status.level": -1, "status.xp": -1 }).limit(5);
                 let rankMsg = ["TOP 5 SOBREVIVENTES DO WASTELAND", "-------------------------------"];
@@ -236,11 +223,8 @@ const parser = {
                 });
                 responseText = ascii.drawBox("RANKING MUNDIAL", rankMsg);
                 break;
-            // ==========================================
-            // SISTEMA DE ADMINISTRADOR (GOD MODE)
-            // ==========================================
+
             case 'admin':
-                
                 const admins = ['leonardo', 'Leonardo', 'kakaroto', 'Kakaroto'];
                 if (!admins.includes(player.username)) {
                     responseText = `\x1b[31m[ACESSO NEGADO] Você não tem privilégios de Administrador do Mainframe.\x1b[0m`;
@@ -250,29 +234,25 @@ const parser = {
                 const adminCmd = args[1];
                 
                 if (adminCmd === 'dar') {
-                    
                     const alvoNome = args[2];
                     const itemNome = args[3];
                     const qtdItem = parseInt(args[4]) || 1;
                     
                     if(!alvoNome || !itemNome) {
-                        responseText = `\x1b[33m[USO]\x1b[0m admin dar <jogador> <item> <qtd>\nItens: metal_base, circuitos, agua_pura, bombas`;
+                        responseText = `\x1b[33m[USO]\x1b[0m admin dar <jogador> <item> <qtd>\nItens: metal_base, circuitos, agua_pura, bombas, nucleo_energia`;
                         break;
                     }
                     
-                   
                     const alvo = await Player.findOne({ username: new RegExp('^' + alvoNome + '$', 'i') });
                     if(!alvo) {
                         responseText = `\x1b[31m[ERRO] Jogador '${alvoNome}' não encontrado no banco de dados.\x1b[0m`;
                         break;
                     }
                     
-                    
                     if (alvo.inventory[itemNome] !== undefined) {
                         alvo.inventory[itemNome] += qtdItem;
                         await alvo.save();
                         responseText = `\x1b[32m[GOD MODE] Você invocou ${qtdItem}x ${itemNome} no inventário de ${alvo.username}.\x1b[0m`;
-                        
                         
                         if (alvo.socketId) {
                             io.to(alvo.socketId).emit('output', `\r\n\x1b[1;35m[INTERVENÇÃO DIVINA] Uma fenda se abre no céu e deixa cair ${qtdItem}x ${itemNome} aos seus pés!\x1b[0m\r\n> `);
@@ -282,7 +262,6 @@ const parser = {
                     }
                 }
                 else if (adminCmd === 'tp') {
-                    
                     const nx = parseInt(args[2]);
                     const ny = parseInt(args[3]);
                     if (isNaN(nx) || isNaN(ny)) {
@@ -294,12 +273,10 @@ const parser = {
                     }
                 }
                 else if (adminCmd === 'anuncio') {
-                    
                     const msg = args.slice(2).join(' ');
                     if(!msg) {
                         responseText = `\x1b[33m[USO]\x1b[0m admin anuncio <sua mensagem aqui>`;
                     } else {
-                        
                         io.emit('output', `\r\n\x1b[1;41;37m [ TRANSMISSÃO DO MAINFRAME ] ${msg} \x1b[0m\r\n> `);
                         responseText = `[GOD MODE] Anúncio global disparado com sucesso.`;
                     }
@@ -313,9 +290,6 @@ const parser = {
                 }
                 break;
 
-            // ==========================================
-            // SISTEMA DE CLÃS E FACÇÕES
-            // ==========================================
             case 'clan':
                 const acaoClan = args[1];
                 const nomeClan = args.slice(2).join(' ');
@@ -340,7 +314,6 @@ const parser = {
                     } else if (player.clan) {
                         responseText = `\x1b[31m[ERRO] Você já pertence ao clã [${player.clan}].\x1b[0m`;
                     } else {
-                        
                         player.clan = nomeClan;
                         responseText = `\x1b[32m[FACÇÃO] Você se juntou ao clã [${nomeClan}].\x1b[0m`;
                     }
@@ -350,9 +323,6 @@ const parser = {
                 }
                 break;
 
-            // ==========================================
-            // SISTEMA DE INVASÃO (RAID)
-            // ==========================================
             case 'invadir':
                 const alvoBase = await Base.findOne({ x: player.location.x, y: player.location.y });
                 
@@ -371,7 +341,6 @@ const parser = {
 
                 player.status.energy -= 20;
 
-               
                 let bonusBomba = 0;
                 let logBomba = "";
                 if (player.inventory.bombas > 0) {
@@ -380,13 +349,11 @@ const parser = {
                     logBomba = `\x1b[1;33m[EXPLOSIVO] Usaste 1x Bomba Caseira! As defesas inimigas foram obliteradas (+40% Chance).\x1b[0m\n`;
                 }
 
-               
                 const defInimiga = (alvoBase.defenseLevel || 0) * 15;
                 const chanceSucesso = 30 + (player.equipment.weapon.atk) + bonusBomba - defInimiga;
                 const rolagem = Math.floor(Math.random() * 100);
 
                 if (rolagem <= chanceSucesso) {
-                    
                     const saqueMetal = alvoBase.inventory.metal_base + (Math.floor(Math.random() * 20) + 10);
                     player.inventory.metal_base += saqueMetal;
                     
@@ -395,7 +362,6 @@ const parser = {
                     responseText = logBomba + `\x1b[1;32m[INVASÃO BEM SUCEDIDA]\x1b[0m\nArrombaste os portões da ${alvoBase.name} e saqueaste o cofre!\n\x1b[33mRoubaste ${saqueMetal}x metal_base no total.\x1b[0m`;
                     io.emit('output', `\r\n\x1b[1;31m[ALERTA GLOBAL] A base de ${alvoBase.owner} foi REDUZIDA A CINZAS por ${player.username}!\x1b[0m\r\n> `);
                 } else {
-                   
                     player.status.hp -= 30;
                     responseText = logBomba + `\x1b[1;31m[FALHA NA INVASÃO]\x1b[0m\nAs defesas automatizadas resistiram! Tomas 30 de dano pelos estilhaços.`;
                 }
@@ -414,9 +380,9 @@ const parser = {
                         const temBaseAqui = basesLocais.find(b => b.x === x && b.y === y);
                         
                         if (x === player.location.x && y === player.location.y) {
-                            linha += "\x1b[1;32m@\x1b[0m "; // VOCÊ
+                            linha += "\x1b[1;32m@\x1b[0m "; 
                         } else if (temBaseAqui) {
-                            linha += "\x1b[1;34mB\x1b[0m "; // BASE (Azul)
+                            linha += "\x1b[1;34mB\x1b[0m "; 
                         } else {
                             const terreno = Math.abs((x * 73 + y * 37) % 10);
                             if (terreno < 2) linha += "\x1b[31m#\x1b[0m ";
@@ -430,9 +396,7 @@ const parser = {
                 radar += "Legenda: @(Você) | .(Caminho) | #(Escombros) | *(Recursos) | \x1b[1;34mB(Base)\x1b[0m\n";
                 responseText = radar;
                 break;
-            // ==========================================
-            // SISTEMA DE MERCADO E INVENTÁRIO
-            // ==========================================
+
             case 'mercado':
                 responseText = ascii.drawBox("MERCADO DA ZONA MORTA", [
                     "Moeda aceita: metal_base (Sucata)",
@@ -504,13 +468,11 @@ const parser = {
                 if (!mensagem) {
                     responseText = `[USO] gritar <sua mensagem aqui>`;
                 } else {
-                    
                     io.emit('output', `\r\n\x1b[1;36m[RÁDIO GLOBAL] ${player.username} grita: "${mensagem}"\x1b[0m\r\n> `);
                     responseText = `[SISTEMA] Mensagem transmitida pelas frequências abertas.`;
                 }
                 break;
 
-            
             case 'norte': case 'sul': case 'leste': case 'oeste':
                 if (player.status.energy < 2) {
                     responseText = `\x1b[31m[AVISO] Exaustão extrema. Impossível mover-se.\x1b[0m`;
@@ -524,7 +486,6 @@ const parser = {
                 responseText = `[NAVEGAÇÃO] Avançando para o ${command}...\n[SISTEMA] Nova localização: [${player.location.x}, ${player.location.y}]`;
                 break;
 
-            
             case 'reciclar':
                 if (player.inventory.metal_base >= 5) {
                     player.inventory.metal_base -= 5;
@@ -559,33 +520,21 @@ const parser = {
                 break;
             
             case 'explorar':
-                let listaInimigos = ['rat_mutante', 'escorpiao'];
-
-                if (player.location.world === 'world_002') {
-                    listaInimigos = ['saqueador', 'andarilho_ferro'];
-                }
-
-                const inimigoSorteado = listaInimigos[Math.floor(Math.random() * listaInimigos.length)];
-
                 if (player.status.energy < 5) {
                     responseText = `\x1b[31m[AVISO] Energia insuficiente.\x1b[0m`;
                     break;
                 }
 
-                
                 const baseSegura = await Base.findOne({ x: player.location.x, y: player.location.y });
                 if (baseSegura) {
-                    
                     player.status.hp = Math.min(player.status.maxHp, player.status.hp + 15);
                     player.status.energy = Math.min(player.status.maxEnergy, player.status.energy + 10);
                     responseText = `\x1b[36m[ZONA SEGURA] Você está na ${baseSegura.name}. Descansando em segurança (Recuperou HP e Energia).\x1b[0m`;
                     break; 
                 }
 
-                
                 player.status.energy -= 5;
 
-               
                 if (player.location.x === 15 && player.location.y === 15) {
                     player.combatState.inCombat = true;
                     player.combatState.enemyId = 'rei_mutante';
@@ -597,20 +546,35 @@ const parser = {
                     break; 
                 }
 
-                
                 const sorte = Math.random();
                 
                 if (sorte < 0.4) {
-                    
                     const sucata = Math.floor(Math.random() * 5) + 1;
                     player.inventory.metal_base += sucata;
                     responseText = `[SISTEMA] Vasculhando os destroços... \x1b[33mVocê encontrou ${sucata}x metal_base!\x1b[0m`;
+                    
+                    const chanceDrop = Math.floor(Math.random() * 100) + 1;
+                    if (chanceDrop >= 96) {
+                        player.inventory.nucleo_energia = (player.inventory.nucleo_energia || 0) + 1;
+                        responseText += `\n\x1b[1;33m[DROP ÉPICO!] Você escavou um compartimento secreto e encontrou 1x NÚCLEO DE ENERGIA!\x1b[0m`;
+                        
+                        if (global.adminLog) adminLog('SISTEMA', `${player.username} encontrou um NÚCLEO DE ENERGIA!`);
+                        io.emit('output', `\r\n\x1b[1;33m[RÁDIO GLOBAL] Rumores dizem que ${player.username} encontrou um Núcleo de Energia nas ruínas...\x1b[0m\r\n> `);
+                    }
+                    else if (chanceDrop >= 81) {
+                        player.inventory.circuitos += 1;
+                        responseText += `\n\x1b[36m[DROP INCOMUM] Você encontrou 1x circuito intacto!\x1b[0m`;
+                    }
+
                 } else if (sorte < 0.6) {
-                   
                     responseText = `[SISTEMA] Apenas poeira e vento radioativo. Nada útil encontrado.`;
                 } else {
-                    
-                    const listaInimigos = ['rat_mutante', 'escorpiao', 'saqueador'];
+                    // VERIFICAÇÃO DE MUNDO CORRIGIDA AQUI!
+                    let listaInimigos = ['rat_mutante', 'escorpiao'];
+                    if (player.location.world === 'world_002') {
+                        listaInimigos = ['saqueador', 'andarilho_ferro'];
+                    }
+
                     const inimigoSorteado = listaInimigos[Math.floor(Math.random() * listaInimigos.length)];
                     const inimigoInfo = ascii.enemies[inimigoSorteado];
 
@@ -632,9 +596,7 @@ const parser = {
                 responseText = `\x1b[31m[ERRO] Comando '${command}' não reconhecido.\x1b[0m Digite 'ajuda'.`;
         }
 
-       
         await player.save();
-
         return { text: responseText, playerData: player };
     }
 };

@@ -24,6 +24,7 @@ const PlayerSchema = new mongoose.Schema({
         circuitos: { type: Number, default: 2 },
         agua_pura: { type: Number, default: 1 },
         bombas: { type: Number, default: 0 },
+        nucleo_energia: {type: Number, default: 0},
         items: [] 
     },
     equipment: {
