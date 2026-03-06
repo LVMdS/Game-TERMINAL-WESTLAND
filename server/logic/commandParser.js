@@ -1,6 +1,7 @@
 const ascii = require('./asciiLibrary');
 const Base = require('../models/Base');
 const Player = require('../models/Player');
+const Market = require('../models/Market');
 
 const parser = {
     process: async (player, command, args, io) => {
@@ -100,7 +101,9 @@ const parser = {
                     "clan criar [nome]     - Funda uma fação (Custa 5 circuitos)",
                     "clan juntar [nome]    - Entra numa fação existente",
                     "invadir               - Ataca base inimiga (Usa bomba se tiveres)",
-                    "clan / limpar / gritar- Comandos sociais e de sistema"
+                    "clan / limpar / gritar- Comandos sociais e de sistema",
+                    "mercado livre         - Vê os itens vendidos por outros jogadores",
+                    "vender [item] [qtd] [preço] - Coloca um item à venda no mercado",
                 ]);
                 break;
 
@@ -397,26 +400,73 @@ const parser = {
                 responseText = radar;
                 break;
 
-            case 'mercado':
-                responseText = ascii.drawBox("MERCADO DA ZONA MORTA", [
-                    "Moeda aceita: metal_base (Sucata)",
-                    "-----------------------------------------------",
-                    "1. agua_pura   - 10 sucata (Recupera HP/Energia)",
-                    "2. pistola     - 50 sucata (Arma: ATK+25)",
-                    "3. colete      - 40 sucata (Armadura: DEF+10)",
-                    "-----------------------------------------------",
-                    "Digite 'comprar [nome_do_item]' para adquirir."
-                ]);
+           case 'mercado':
+                if (args[1] === 'livre') {
+                    const ofertas = await Market.find({});
+                    if (ofertas.length === 0) {
+                        responseText = ascii.drawBox("MERCADO LIVRE (JOGADORES)", ["Nenhuma oferta ativa no momento."]);
+                        break;
+                    }
+                    let linhasMercado = ["ID   | VENDEDOR   | ITEM (QTD)        | PREÇO", "-----------------------------------------------"];
+                    ofertas.forEach(of => {
+                        linhasMercado.push(`#${of.offerId.padEnd(4)} | ${of.seller.padEnd(10)} | ${of.item} (x${of.quantity})`.padEnd(36) + `| ${of.price} suc`);
+                    });
+                    linhasMercado.push("-----------------------------------------------");
+                    linhasMercado.push("Digite 'comprar [ID]' para adquirir de um jogador.");
+                    responseText = ascii.drawBox("MERCADO LIVRE (JOGADORES)", linhasMercado);
+                } else {
+                    responseText = ascii.drawBox("MERCADO DA ZONA MORTA", [
+                        "Moeda aceita: metal_base (Sucata)",
+                        "-----------------------------------------------",
+                        "1. agua_pura   - 10 sucata (Recupera HP/Energia)",
+                        "2. pistola     - 50 sucata (Arma: ATK+25)",
+                        "3. colete      - 40 sucata (Armadura: DEF+10)",
+                        "-----------------------------------------------",
+                        "Digite 'comprar [nome_do_item]' para comprar da loja NPC.",
+                        "Digite '\x1b[33mmercado livre\x1b[0m' para ver ofertas de jogadores."
+                    ]);
+                }
                 break;
 
             case 'comprar':
                 const itemComprar = args[1];
                 if (!itemComprar) {
-                    responseText = `\x1b[33m[USO]\x1b[0m Digite: comprar agua_pura, comprar pistola ou comprar colete`;
+                    responseText = `\x1b[33m[USO]\x1b[0m comprar <item_da_loja> OU comprar <ID_da_oferta>`;
                     break;
                 }
 
-                if (itemComprar === 'agua_pura') {
+                let isOfferId = itemComprar.startsWith('#') ? itemComprar.substring(1) : itemComprar;
+                
+                const ofertaAtiva = await Market.findOne({ offerId: isOfferId.toUpperCase() });
+
+                if (ofertaAtiva) {
+                    if (ofertaAtiva.seller === player.username) {
+                        responseText = `\x1b[31m[ERRO] Não podes comprar a tua própria oferta!\x1b[0m`;
+                        break;
+                    }
+                    if (player.inventory.metal_base < ofertaAtiva.price) {
+                        responseText = `\x1b[31m[MERCADO] Saldo insuficiente. Esta oferta custa ${ofertaAtiva.price} sucata.\x1b[0m`;
+                        break;
+                    }
+
+                    player.inventory.metal_base -= ofertaAtiva.price;
+                    player.inventory[ofertaAtiva.item] = (player.inventory[ofertaAtiva.item] || 0) + ofertaAtiva.quantity;
+                    
+                    const vendedor = await Player.findOne({ username: ofertaAtiva.seller });
+                    if (vendedor) {
+                        vendedor.inventory.metal_base += ofertaAtiva.price;
+                        await vendedor.save();
+                        
+                        if (vendedor.socketId) {
+                            io.to(vendedor.socketId).emit('output', `\r\n\x1b[1;32m[VENDAS] Ca-Ching! ${player.username} comprou o teu ${ofertaAtiva.item}. Recebeste ${ofertaAtiva.price} sucata!\x1b[0m\r\n> `);
+                        }
+                    }
+
+                    await Market.deleteOne({ _id: ofertaAtiva._id });
+
+                    responseText = `\x1b[32m[MERCADO LIVRE] Negócio fechado! Compraste ${ofertaAtiva.quantity}x ${ofertaAtiva.item} por ${ofertaAtiva.price} sucata.\x1b[0m`;
+                } 
+                else if (itemComprar === 'agua_pura') {
                     if (player.inventory.metal_base >= 10) {
                         player.inventory.metal_base -= 10;
                         player.inventory.agua_pura = (player.inventory.agua_pura || 0) + 1;
@@ -438,8 +488,50 @@ const parser = {
                     } else responseText = `\x1b[31m[MERCADO] Saldo insuficiente. Custa 40 sucata.\x1b[0m`;
                 } 
                 else {
-                    responseText = `\x1b[31m[ERRO] Item '${itemComprar}' não existe no mercado.\x1b[0m`;
+                    responseText = `\x1b[31m[ERRO] O ID '${itemComprar}' não foi encontrado nas ofertas ativas e não é um item de NPC.\x1b[0m`;
                 }
+                break;
+            
+            // ==========================================
+            // SISTEMA DE VENDAS (MERCADO LIVRE)
+            // ==========================================
+            case 'vender':
+                const itemVender = args[1];
+                const qtdVender = parseInt(args[2]);
+                const precoVender = parseInt(args[3]);
+
+                const itensValidos = ['metal_base', 'circuitos', 'agua_pura', 'bombas', 'nucleo_energia'];
+
+                if (!itemVender || !qtdVender || !precoVender || qtdVender <= 0 || precoVender <= 0) {
+                    responseText = `\x1b[33m[USO]\x1b[0m vender <item> <quantidade> <preco_em_sucata>\nExemplo: vender nucleo_energia 1 500`;
+                    break;
+                }
+
+                if (!itensValidos.includes(itemVender)) {
+                    responseText = `\x1b[31m[ERRO] O item '${itemVender}' não pode ser comercializado ou não existe.\x1b[0m`;
+                    break;
+                }
+
+                if (player.inventory[itemVender] === undefined || player.inventory[itemVender] < qtdVender) {
+                    responseText = `\x1b[31m[ERRO] Você não possui ${qtdVender}x ${itemVender} no inventário.\x1b[0m`;
+                    break;
+                }
+
+                player.inventory[itemVender] -= qtdVender;
+
+                const offerId = Math.random().toString(16).slice(-4).toUpperCase();
+                
+                await new Market({
+                    seller: player.username,
+                    item: itemVender,
+                    quantity: qtdVender,
+                    price: precoVender,
+                    offerId: offerId
+                }).save();
+
+                responseText = `\x1b[32m[MERCADO LIVRE] Oferta criada! ID: #${offerId} | Vendendo ${qtdVender}x ${itemVender} por ${precoVender} sucata.\x1b[0m`;
+                
+                io.emit('output', `\r\n\x1b[1;36m[COMÉRCIO GLOBAL] ${player.username} colocou ${qtdVender}x ${itemVender} à venda no Mercado Livre!\x1b[0m\r\n> `);
                 break;
 
             case 'usar':
