@@ -15,6 +15,19 @@ Você assume o controle de um terminal mestre. Através dele, você comanda traj
 **"No Wasteland, o conhecimento é poder, mas o metal é a única lei que resta."**
 
 
+## 🕹️ Principais Mecânicas Implementadas
+
+O jogo evoluiu de um simples chat para um ecossistema persistente e vivo:
+
+* **Mundo Procedural & Biomas:** Navegação por coordenadas infinitas com radar (`mapa`). Viagens dimensionais/zonas de alto nível (`world_002` para nível 5+).
+* **Economia B2B (Mercado Livre):** Sistema de comércio entre jogadores. Venda itens e receba os lucros em tempo real (`mercado livre`, `vender`).
+* **Ciclo Dia/Noite & Clima Dinâmico:** Eventos de servidor independentes dos jogadores. A noite dobra o loot e aumenta a força inimiga; tempestades radioativas causam dano a quem não estiver em abrigos.
+* **Construção de Bases & Indústria:** Construa abrigos, instale até 4 *Torretas Automáticas* de defesa e implemente *Extratores* para farmar recursos passivamente offline (`base recolher`).
+* **Sistemas CCTV (Five Nights at Freddy's style):** Craft e instale Câmeras na sua base. Acesse feeds de vigilância renderizados em Arte ASCII em tempo real (`cam 1`).
+* **Hacking de Cofres:** Mini-game de lógica (estilo Mastermind) integrado ao terminal para decodificar senhas de 3 dígitos e obter loots épicos (`hackear cofre`).
+* **Companheiros Robóticos (Pets):** Crafter um `drone` reduz o custo de estamina nas explorações e auxilia com tiros de laser durante os combates por turnos.
+* **Guerra de Facções & PvP Assíncrono:** Sistema de clãs com cofre compartilhado e mecânicas de invasão de base (Raid) utilizando bombas caseiras contra defesas inimigas.
+* **Lore & Áudio Imersivo:** Efeitos Sonoros de digitação mecânica e ruídos de reator, associados a um shader visual CRT/Neon Green e colecionáveis narrativos (`holofita_01`).
 
 
 # 📑 ESPECIFICAÇÕES TÉCNICAS - TERMINAL WASTELAND V1.0
@@ -37,3 +50,28 @@ Restrito a usuários pré-definidos no código:
 * `admin dar [user] [item] [qtd]`: Manipulação direta de inventário.
 * `admin tp [x] [y]`: Teletransporte global.
 * `admin anuncio [msg]`: Transmissão broadcast para todos os terminais ativos.
+
+
+## 🚀 Como Executar Localmente
+
+Se você deseja rodar o seu próprio servidor de Terminal Wasteland:
+
+1. **Clone o repositório:**
+   ```bash
+   git clone [https://github.com/SeuUsuario/Terminal-Wasteland.git](https://github.com/SeuUsuario/Terminal-Wasteland.git)
+   cd Terminal-Wasteland
+
+    ```bash
+        npm install
+
+**inicie o Banco de Dados:**
+    Certifique-se de que o MongoDB está rodando na sua máquina na porta 27017 (ou configure sua string no server.js).
+
+## Acesse o Terminal:
+Abra seu navegador em http://localhost:3000, clique em qualquer lugar da tela preta para habilitar os recursos de som,
+e digite registrar <seu_nome> <senha>.
+
+
+
+
+**"A humanidade precisa de sucata. O terminal está esperando por você." - Desenvolvido por Leonardo De Souza.**

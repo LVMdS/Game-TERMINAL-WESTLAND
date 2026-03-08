@@ -1,40 +1,75 @@
-==========================================================
-        MANUAL DE SOBREVIVÊNCIA: TERMINAL WASTELAND
-==========================================================
+========================================================================
+             MANUAL DE SOBREVIVÊNCIA: TERMINAL WASTELAND OS
+                             VERSÃO 1.4
+========================================================================
 
-Bem-vindo à Rede Secundária, Recruta. Siga estas instruções
-para garantir que sua sucata não termine nas mãos de rivais.
+Bem-vindo à Rede Secundária, Recruta. O "Grande Colapso" destruiu o mundo,
+mas o Mainframe continua operante. Siga este manual para não virar poeira
+radioativa.
 
-1. COMANDOS INICIAIS
---------------------
+[ 1. COMANDOS DO SISTEMA E NAVEGAÇÃO ]
+------------------------------------------------------------------------
 - registrar <nome> <senha> : Cria sua conta (Ganha Kit Inicial).
 - login <nome> <senha>     : Conecta ao seu traje de exploração.
-- status                   : Mostra Vida, Energia e Inventário.
-- ajuda                    : Lista todos os comandos disponíveis.
+- status                   : Mostra Nível, HP, Energia, Equipamentos e Inventário.
+- mapa                     : Exibe o radar local, recursos, bases e escombros.
+- norte/sul/leste/oeste    : Movimenta seu traje pelo mapa (Custa 2 Energia).
+- viajar <mundo>           : Muda de bioma (Ex: viajar world_002 requer Nível 5).
+- limpar                   : Limpa a tela do terminal.
 
-2. EXPLORAÇÃO E SOBREVIVÊNCIA
------------------------------
-- norte, sul, leste, oeste : Movimenta seu traje pelo mapa.
-- explorar                 : Busca recursos (Custa 5 Energia).
+[ 2. EXPLORAÇÃO, COMBATE E MISSÕES ]
+------------------------------------------------------------------------
+- explorar                 : Busca recursos ou monstros (Custa 5 Eng).
 - atacar                   : Inicia combate com monstros locais.
-- usar agua_pura           : Recupera HP e Energia rapidamente.
+- fugir                    : Escapa de uma batalha (Covarde, mas vivo).
+- usar agua_pura           : Recupera 100% de HP e Energia.
+- missoes                  : Solicita ou verifica um contrato de caça (dá circuitos!).
+- usar holofita_01         : Toca fitas de áudio antigas (Lore do jogo).
 
-3. CONSTRUÇÃO E ECONOMIA
-------------------------
-- mercado                  : Abre a loja de trocas da Zona Morta.
-- construir base           : Cria um abrigo (Custo: 50 suc, 10 circ).
-- base status              : Verifica o cofre e defesas da sua base.
-- base depositar <qtd>     : Guarda sua sucata em segurança.
-- defender                 : Instala torretas (Custa 30 suc, 5 circ).
+[ 3. ECONOMIA E MERCADO (SUCATA É A LEI) ]
+------------------------------------------------------------------------
+- reciclar                 : Transforma 5x metal_base em 1x circuito.
+- mercado                  : Abre o mercado NPC (compra água, pistola, colete).
+- comprar <item>           : Compra do NPC (Ex: comprar agua_pura).
+- vender <item> <qtd> <$>: Cria uma oferta no Mercado Livre (Ex: vender circuitos 2 50).
+- mercado livre            : Vê a vitrine de itens de outros jogadores.
+- comprar #<ID>            : Compra um item de outro jogador usando o ID da oferta.
 
-4. GUERRA E EQUIPAMENTO
------------------------
-- craft faca               : Melhora seu ataque básico.
-- craft bomba              : Cria explosivos para invasões.
-- invadir                  : Tenta saquear uma base inimiga no local.
-- viajar <mundo>           : Muda de bioma (Ex: world_002 - Nível 5+).
+[ 4. CRAFTING E SISTEMAS AVANÇADOS ]
+------------------------------------------------------------------------
+- craft faca               : Forja Arma Básica (10 suc, 2 circ).
+- craft bomba              : Cria explosivos para invasões (15 suc, 5 circ).
+- craft camera             : Módulo CCTV de vigilância (10 suc, 3 circ).
+- craft drone              : PET mecânico que ataca e poupa energia (100 suc, 20 circ, 1 núcleo).
+- hackear cofre            : Inicia o minigame de invasão para abrir cofres antigos! 
+                             (Adivinhe 3 números em 5 tentativas. Errar causa explosão).
 
-DICA DE SOBREVIVÊNCIA:
-Sempre mantenha sua base defendida. Se um inimigo usar uma 
-bomba contra você, apenas suas torretas podem salvar seu cofre!
-==========================================================
+[ 5. BASES E INDÚSTRIA (DOMÍNIO TERRITORIAL) ]
+------------------------------------------------------------------------
+- construir base           : Cria sua base na coordenada atual (50 suc, 10 circ).
+- base status              : Verifica cofres, defesas e máquinas.
+- base depositar <qtd>     : Guarda sucata_base no cofre.
+- base sacar <qtd>         : Retira sucata_base do cofre.
+- defender                 : Instala até 4 Torretas contra invasões (30 suc, 5 circ).
+- instalar camera          : Instala até 8 câmeras CCTV na base.
+- cam <1 a 8>              : Acessa as imagens de vigilância da base.
+- construir extrator       : Cria mina automática (80 suc, 15 circ).
+- base recolher            : Coleta os recursos farmados pelos extratores offline.
+
+[ 6. FACÇÕES E GUERRA (PVP) ]
+------------------------------------------------------------------------
+- clan criar <nome>        : Funda uma facção (Custa 5 circuitos).
+- clan juntar <nome>       : Entra num clã existente.
+- clan status              : Acessa o cofre coletivo do clã.
+- clan depositar <i.> <q>  : Doa recursos para a facção.
+- invadir                  : Tenta saquear a base inimiga local (Bombas ajudam!).
+
+------------------------------------------------------------------------
+[ DICAS VITAIS DE SOBREVIVÊNCIA ]
+1. FIQUE DE OLHO NO CÉU: Se uma tempestade radioativa começar, esconda-se
+   em uma base ou você tomará dano por turno!
+2. CICLO DIA/NOITE: À noite o loot é DOBRADO, mas os monstros dão mais dano.
+3. SENHAS DO COFRE: No hacking, "Exatos" significa número e posição certos. 
+   "Posição Errada" significa que o número existe na senha, mas em outro lugar.
+4. RENDA PASSIVA: Extratores geram sucata mesmo quando você está offline!
+========================================================================
