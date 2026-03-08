@@ -70,7 +70,7 @@ Se você deseja rodar o seu próprio servidor de Terminal Wasteland:
 
 ## Acesse o Terminal:
 Abra seu navegador em http://localhost:3000, clique em qualquer lugar da tela preta para habilitar os recursos de som,
-e digite registrar <seu_nome> e <senha>.
+e digite registrar <seu_nome> e <senha> .
 
 
 
