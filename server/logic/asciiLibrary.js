@@ -20,7 +20,6 @@ const asciiLibrary = {
         return box;
     },
 
-
     enemies: {
         rat_mutante: {
             name: "RAT MUTANTE",
@@ -51,17 +50,6 @@ const asciiLibrary = {
                    "       /   \\ " 
                 ]
         },
-        rat_mutante: {
-            name: "RAT MUTANTE",
-            baseHp: 45, atk: 12, def: 3,
-            xpReward: 20,
-            art: [
-                "      /\\___/\\",
-                "     (  o o  )",
-                "     /   * \\",
-                "     \\_______/"
-            ]
-        },
         rei_mutante: {
             name: "REI MUTANTE (CHEFÃO)",
             baseHp: 250, atk: 35, def: 15,
@@ -86,7 +74,7 @@ const asciiLibrary = {
                 "    | |  | |  ",
                 "   /_/    \\_\\ "
             ]
-        },
+        }
     },
 
     mapIcons: {
@@ -95,7 +83,44 @@ const asciiLibrary = {
         resource: `${colors.amber}R${colors.reset}`,
         empty: ".",
         wall: "#"
-    }
+    },
+
+    // --- ADICIONADO AQUI PARA DENTRO DO OBJETO ---
+    cameraViews: [
+        // 0: Vazio / Calmo
+        [
+            "     .      .       .         .       .      ",
+            "         / \\               * ",
+            "        /   \\      _             .           ",
+            "       /_____\\   _( )_                       ",
+            "      |       | (_ o _)    .                 ",
+            "      |_______|   |_|                        ",
+            "                                             ",
+            " STATUS: NENHUM MOVIMENTO DETECTADO          "
+        ],
+        // 1: Andarilho de Ferro ao longe
+        [
+            " .         .                  .          .   ",
+            "      .             ___                      ",
+            "           .       [o_o]         .           ",
+            "                   /[_]\\                     ",
+            "      _            _/ \\_             _       ",
+            "     ( )_         _______          _( )_     ",
+            "    (_o _)       |       |        (_ o _)    ",
+            " \x1b[31mWARNING: ANOMALIA METÁLICA NO SETOR 4\x1b[90m       "
+        ],
+        // 2: Estática / Ruído de Radiação
+        [
+            " %$#@!*&^%$#@!*&^%$#@!*&^%$#@!*&^%$#@!*&^%$# ",
+            " &^%$#@!* \x1b[37mNO SIGNAL\x1b[90m   &^%$#@!*&^%$#@!*&^%$# ",
+            " !*&^%$#@!*&^%$#@!*&^%$#@!*&^%$#@!*&^%$#@!*& ",
+            " %$#@! \x1b[33mINTERFERÊNCIA RADIOATIVA\x1b[90m !*&^%$#@!*&^ ",
+            " &^%$#@!*&^%$#@!*&^%$#@!*&^%$#@!*&^%$#@!*&^% ",
+            " !*&^%$#@!*&^%$#@!*&^%$#@!*&^%$#@!*&^%$#@!*& ",
+            " %$#@!*&^%$#@!*&^%$#@!*&^%$#@!*&^%$#@!*&^%$# ",
+            " ERRO: CONEXÃO COM A CÂMERA PERDIDA          "
+        ]
+    ]
 };
 
 module.exports = asciiLibrary;

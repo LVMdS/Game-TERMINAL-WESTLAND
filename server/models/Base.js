@@ -8,7 +8,9 @@ const BaseSchema = new mongoose.Schema({
     inventory: {
         metal_base: { type: Number, default: 0 },
         circuitos: { type: Number, default: 0 }
-    }
+    },
+    defenseLevel: { type: Number, default: 0 },
+    cameras: {type: Number, defaul: 0}
 });
 
 module.exports = mongoose.model('Base', BaseSchema);

@@ -30,7 +30,7 @@ const parser = {
                     player.combatState.inCombat = false;
                     player.combatState.enemyId = null;
 
-                if (player.quest && player.quest.active && player.quest.targetId === enemyKey) {
+                    if (player.quest && player.quest.active && player.quest.targetId === enemyKey) {
                         player.quest.progress += 1;
                         responseText += `\x1b[36m[MISSÃO] Progresso: ${player.quest.progress}/${player.quest.goal}\x1b[0m\n`;
                         
@@ -106,6 +106,9 @@ const parser = {
                     "craft [item]          - Forja itens (ex: craft faca, craft bomba)",
                     "construir base        - Cria zona segura (50 suc, 10 circ)",
                     "defender              - Instala torretas na base (Custa 30 suc, 5 circ)",
+                    "craft camera          - Forja uma câmera de segurança (10 suc, 3 circ)",
+                    "instalar camera       - Instala na sua base (Máx: 8)",
+                    "cam [1-8]             - Acessa o feed de vídeo da câmera instalada",
                     "viajar [world_001/2]  - Viaja entre mapas (world_002 exige Lvl 5)",
                     "ranking               - Mostra os 5 jogadores mais fortes",
                     "base depositar [qtd]  - Guarda sucata na tua base",
@@ -125,7 +128,6 @@ const parser = {
             // ==========================================
             case 'missoes':
                 if (!player.quest || !player.quest.active) {
-                   
                     const targets = ['rat_mutante', 'escorpiao', 'saqueador'];
                     const tId = targets[Math.floor(Math.random() * targets.length)];
                     const tName = ascii.enemies[tId].name;
@@ -159,7 +161,8 @@ const parser = {
                     `-------------------------------------------`,
                     `EQUIPAMENTO ESPECIAL:`,
                     `> Bombas Caseiras    : ${player.inventory.bombas || 0} unit.`, 
-                    `> Núcleo de Energia  : ${player.inventory.nucleo_energia || 0} unit.`, // ADICIONADO AQUI
+                    `> Núcleo de Energia  : ${player.inventory.nucleo_energia || 0} unit.`, 
+                    `> Fita (holofita_01) : ${player.inventory.holofita_01 ? '1' : '0'} unit.`, 
                     `-------------------------------------------`,
                     `CLÃ: ${player.clan || 'Sem afiliação'}`
                 ];
@@ -229,15 +232,74 @@ const parser = {
                     responseText = `\x1b[31m[ERRO] Você precisa estar na SUA base para instalar defesas.\x1b[0m`;
                     break;
                 }
+                if ((baseDef.defenseLevel || 0) >= 4) {
+                    responseText = `\x1b[31m[ERRO] A infraestrutura da base suporta no máximo 4 Torretas.\x1b[0m`;
+                    break;
+                }
                 if (player.inventory.metal_base >= 30 && player.inventory.circuitos >= 5) {
                     player.inventory.metal_base -= 30;
                     player.inventory.circuitos -= 5;
                     baseDef.defenseLevel = (baseDef.defenseLevel || 0) + 1;
                     await baseDef.save();
-                    responseText = `\x1b[32m[SEGURANÇA] Torreta instalada! Nível de Defesa da Base: ${baseDef.defenseLevel}.\x1b[0m\n(Cada nível reduz a chance de invasão inimiga em 15%)`;
+                    responseText = `\x1b[32m[SEGURANÇA] Torreta instalada! (${baseDef.defenseLevel}/4 permitidas).\x1b[0m`;
                 } else {
                     responseText = `\x1b[31m[ERRO] Recursos insuficientes (Custo: 30x suc, 5x circ).\x1b[0m`;
                 }
+                break;
+            // ==========================================
+            // SISTEMA DE CÂMERAS CCTV (VIGILÂNCIA)
+            // ==========================================
+            case 'instalar':
+                if (args[1] === 'camera') {
+                    const baseCam = await Base.findOne({ x: player.location.x, y: player.location.y, owner: player.username });
+                    if (!baseCam) {
+                        responseText = `\x1b[31m[ERRO] Você precisa estar na SUA base para instalar câmeras.\x1b[0m`;
+                        break;
+                    }
+                    if ((baseCam.cameras || 0) >= 8) {
+                        responseText = `\x1b[31m[ERRO] A rede local suporta no máximo 8 Câmeras.\x1b[0m`;
+                        break;
+                    }
+                    if (player.inventory.camera > 0) {
+                        player.inventory.camera -= 1;
+                        baseCam.cameras = (baseCam.cameras || 0) + 1;
+                        await baseCam.save();
+                        responseText = `\x1b[36m[CCTV] Câmera instalada com sucesso! (${baseCam.cameras}/8 permitidas).\x1b[0m\nDigite 'cam ${baseCam.cameras}' para ver as imagens.`;
+                    } else {
+                        responseText = `\x1b[31m[ERRO] Você não possui câmeras no inventário. Use 'craft camera'.\x1b[0m`;
+                    }
+                } else {
+                    responseText = `[USO] instalar camera`;
+                }
+                break;
+
+            case 'cam':
+                const numCam = parseInt(args[1]);
+                const baseParaOlhar = await Base.findOne({ x: player.location.x, y: player.location.y, owner: player.username });
+                
+                if (!baseParaOlhar) {
+                    responseText = `\x1b[31m[ERRO] O sistema CCTV só pode ser acessado de dentro da sua base.\x1b[0m`;
+                    break;
+                }
+                if (isNaN(numCam) || numCam < 1 || numCam > (baseParaOlhar.cameras || 0)) {
+                    responseText = `\x1b[31m[ERRO] Câmera ${args[1] || '?'} inválida ou não instalada. Você possui ${baseParaOlhar.cameras || 0} câmeras ativas.\x1b[0m`;
+                    break;
+                }
+                const cenarioRandom = ascii.cameraViews[Math.floor(Math.random() * ascii.cameraViews.length)];
+        
+                let uiCamera = [
+                    `\x1b[1;30m[=============================================]\x1b[0m`,
+                    `\x1b[1;30m[\x1b[0m \x1b[32mCCTV FEED - CAM 0${numCam}\x1b[0m  |  \x1b[31mREC *\x1b[0m  |  ${new Date().toLocaleTimeString()} \x1b[1;30m]\x1b[0m`,
+                    `\x1b[1;30m[---------------------------------------------]\x1b[0m`
+                ];
+                
+                cenarioRandom.forEach(linha => {
+                    uiCamera.push(`\x1b[1;30m[\x1b[0m \x1b[90m${linha}\x1b[0m \x1b[1;30m]\x1b[0m`);
+                });
+                
+                uiCamera.push(`\x1b[1;30m[=============================================]\x1b[0m`);
+                
+                responseText = uiCamera.join('\n');
                 break;
 
             case 'viajar':
@@ -280,7 +342,7 @@ const parser = {
                     const qtdItem = parseInt(args[4]) || 1;
                     
                     if(!alvoNome || !itemNome) {
-                        responseText = `\x1b[33m[USO]\x1b[0m admin dar <jogador> <item> <qtd>\nItens: metal_base, circuitos, agua_pura, bombas, nucleo_energia`;
+                        responseText = `\x1b[33m[USO]\x1b[0m admin dar <jogador> <item> <qtd>\nItens: metal_base, circuitos, agua_pura, bombas, nucleo_energia, holofita_01`;
                         break;
                     }
                     
@@ -466,7 +528,7 @@ const parser = {
                 responseText = radar;
                 break;
 
-           case 'mercado':
+            case 'mercado':
                 if (args[1] === 'livre') {
                     const ofertas = await Market.find({});
                     if (ofertas.length === 0) {
@@ -502,7 +564,6 @@ const parser = {
                 }
 
                 let isOfferId = itemComprar.startsWith('#') ? itemComprar.substring(1) : itemComprar;
-                
                 const ofertaAtiva = await Market.findOne({ offerId: isOfferId.toUpperCase() });
 
                 if (ofertaAtiva) {
@@ -566,7 +627,7 @@ const parser = {
                 const qtdVender = parseInt(args[2]);
                 const precoVender = parseInt(args[3]);
 
-                const itensValidos = ['metal_base', 'circuitos', 'agua_pura', 'bombas', 'nucleo_energia'];
+                const itensValidos = ['metal_base', 'circuitos', 'agua_pura', 'bombas', 'nucleo_energia', 'holofita_01'];
 
                 if (!itemVender || !qtdVender || !precoVender || qtdVender <= 0 || precoVender <= 0) {
                     responseText = `\x1b[33m[USO]\x1b[0m vender <item> <quantidade> <preco_em_sucata>\nExemplo: vender nucleo_energia 1 500`;
@@ -604,10 +665,16 @@ const parser = {
                 const itemUsar = args[1];
                 if (!itemUsar) {
                     responseText = `\x1b[33m[USO]\x1b[0m Digite: usar agua_pura`;
+                }
+                else if (itemUsar === 'holofita_01') {
+                    if (player.inventory.holofita_01 > 0) {
+                        responseText = `\x1b[32m[REPRODUZINDO HOLOFITA DE DADOS...]\x1b[0m\n\x1b[36m"Registo #402. Ano 2098. Os drones pararam de nos obedecer. O Vírus Ômega... não é apenas um código. Ele está a reescrever o DNA do planeta. Se alguém ouvir isto, não confie no Mainframe Central. A chave para parar a mutação está em..."\x1b[0m \x1b[31m[GRAVAÇÃO CORROMPIDA]\x1b[0m`;
+                    } else {
+                        responseText = `\x1b[31m[ERRO] Não possuis a holofita_01.\x1b[0m`;
+                    }
                     break;
                 }
-
-                if (itemUsar === 'agua_pura') {
+                else if (itemUsar === 'agua_pura') {
                     if (player.inventory.agua_pura > 0) {
                         player.inventory.agua_pura -= 1;
                         player.status.hp = player.status.maxHp;
@@ -672,6 +739,14 @@ const parser = {
                         responseText = `\x1b[32m[CRAFT] SUCESSO! Fabricaste uma BOMBA CASEIRA.\x1b[0m\n(Será usada automaticamente na tua próxima invasão para +40% de chance!)`;
                     } else responseText = `[ERRO] Recursos insuficientes (Custo: 15x suc, 5x circ).`;
                 }
+                else if (item === 'camera') {
+                    if (player.inventory.metal_base >= 10 && player.inventory.circuitos >= 3) {
+                        player.inventory.metal_base -= 10;
+                        player.inventory.circuitos -= 3;
+                        player.inventory.camera = (player.inventory.camera || 0) + 1;
+                        responseText = `\x1b[32m[CRAFT] SUCESSO! Fabricaste um MÓDULO DE CÂMERA (CCTV).\x1b[0m\n(Vai até a tua base e usa 'instalar camera')`;
+                    } else responseText = `[ERRO] Recursos insuficientes (Custo: 10x suc, 3x circ).`;
+                }
                 else {
                     responseText = `[CRAFT] Receitas válidas: 'craft faca', 'craft bomba'`;
                 }
@@ -691,6 +766,19 @@ const parser = {
                     break; 
                 }
 
+                // Proteção para caso o jogador explore antes do servidor declarar o clima
+                if (global.mundo && global.mundo.clima === 'TEMPESTADE_RAD') {
+                    player.status.hp -= 15;
+                    responseText += `\x1b[1;31m[RADIAÇÃO] Estás exposto à tempestade! Sofreste 15 de dano radiativo.\x1b[0m\n`;
+                    if (player.status.hp <= 0) {
+                        responseText += `\x1b[31m[SISTEMA] O teu traje derreteu com a radiação. Clonagem de emergência ativada.\x1b[0m\n`;
+                        player.status.hp = player.status.maxHp;
+                        player.location.x = 10; player.location.y = 10;
+                        await player.save();
+                        return { text: responseText, playerData: player };
+                    }
+                }
+
                 player.status.energy -= 5;
 
                 if (player.location.x === 15 && player.location.y === 15) {
@@ -707,11 +795,22 @@ const parser = {
                 const sorte = Math.random();
                 
                 if (sorte < 0.4) {
-                    const sucata = Math.floor(Math.random() * 5) + 1;
+                    // Proteção extra para o multiplicador de noite
+                    let multiplicador = (global.mundo && global.mundo.periodo === 'NOITE') ? 2 : 1;
+                    const sucata = (Math.floor(Math.random() * 5) + 1) * multiplicador;
+                    
                     player.inventory.metal_base += sucata;
-                    responseText = `[SISTEMA] Vasculhando os destroços... \x1b[33mVocê encontrou ${sucata}x metal_base!\x1b[0m`;
+                    responseText = `[SISTEMA] Vasculhando os destroços... \x1b[33mEncontraste ${sucata}x metal_base!\x1b[0m`;
                     
                     const chanceDrop = Math.floor(Math.random() * 100) + 1;
+                    
+                    // 1. Drop da Holofita
+                    if (chanceDrop >= 98 && !player.inventory.holofita_01) {
+                        player.inventory.holofita_01 = 1;
+                        responseText += `\n\x1b[1;35m[MISTÉRIO] Escavaste uma cassete antiga coberta de pó: "holofita_01".\x1b[0m`;
+                    }
+                    
+                    // 2. Drop do Núcleo e Circuitos (Restaurado)
                     if (chanceDrop >= 96) {
                         player.inventory.nucleo_energia = (player.inventory.nucleo_energia || 0) + 1;
                         responseText += `\n\x1b[1;33m[DROP ÉPICO!] Você escavou um compartimento secreto e encontrou 1x NÚCLEO DE ENERGIA!\x1b[0m`;
@@ -727,7 +826,6 @@ const parser = {
                 } else if (sorte < 0.6) {
                     responseText = `[SISTEMA] Apenas poeira e vento radioativo. Nada útil encontrado.`;
                 } else {
-                    // VERIFICAÇÃO DE MUNDO CORRIGIDA AQUI!
                     let listaInimigos = ['rat_mutante', 'escorpiao'];
                     if (player.location.world === 'world_002') {
                         listaInimigos = ['saqueador', 'andarilho_ferro'];

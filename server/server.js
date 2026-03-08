@@ -26,6 +26,33 @@ mongoose.connect(MONGO_URI)
   .then(() => console.log('[SYSTEM] Conectado ao MongoDB.'))
   .catch(err => console.error('[SYSTEM] Erro MongoDB:', err));
 
+// ==========================================
+// CICLO DIA/NOITE E CLIMA GLOBAL
+// ==========================================
+global.mundo = { periodo: 'DIA', clima: 'LIMPO' };
+
+setInterval(() => {
+    if (global.mundo.periodo === 'DIA') {
+        global.mundo.periodo = 'NOITE';
+        io.emit('output', `\r\n\x1b[1;34m[SISTEMA GLOBAL] O sol põe-se. A temperatura cai e as sombras da Zona Morta ganham vida. (Monstros mais fortes, maior chance de loot!)\x1b[0m\r\n> `);
+    } else {
+        global.mundo.periodo = 'DIA';
+        io.emit('output', `\r\n\x1b[1;33m[SISTEMA GLOBAL] O sol nasce, iluminando a poeira radioativa. A superfície está mais calma.\x1b[0m\r\n> `);
+    }
+}, 30 * 60 * 1000); 
+
+setInterval(() => {
+    if (Math.random() > 0.7 && global.mundo.clima === 'LIMPO') {
+        global.mundo.clima = 'TEMPESTADE_RAD';
+        io.emit('output', `\r\n\x1b[1;41;37m [ ALERTA METEOROLÓGICO ] TEMPESTADE DE RADIAÇÃO APROXIMA-SE! PROCUREM ABRIGO NUMA BASE IMEDIATAMENTE! \x1b[0m\r\n> `);
+        
+        setTimeout(() => {
+            global.mundo.clima = 'LIMPO';
+            io.emit('output', `\r\n\x1b[1;32m[ALERTA METEOROLÓGICO] A tempestade dissipou-se. O ar está respirável novamente.\x1b[0m\r\n> `);
+        }, 5 * 60 * 1000);
+    }
+}, 15 * 60 * 1000);
+
 // --- LÓGICA DO SOCKET.IO (Tempo Real) ---
 io.on('connection', (socket) => {
     console.log(`[CONN] Nova conexão: ${socket.id}`);

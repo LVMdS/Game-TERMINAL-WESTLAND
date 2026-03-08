@@ -25,6 +25,8 @@ const PlayerSchema = new mongoose.Schema({
         agua_pura: { type: Number, default: 1 },
         bombas: { type: Number, default: 0 },
         nucleo_energia: {type: Number, default: 0},
+        holofita_01: { type: Number, default: 0 },
+        camera: { type: Number, default: 0 },
         items: [] 
     },
     quest: {
