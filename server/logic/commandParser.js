@@ -9,6 +9,63 @@ const parser = {
         let responseText = "";
 
         // ==========================================
+        // SISTEMA 0: TRAVA DE HACKING (MINI-GAME)
+        // ==========================================
+        if (player.hacking && player.hacking.active) {
+            if (command === 'sair' || command === 'fugir') {
+                player.hacking.active = false;
+                await player.save();
+                return { text: `\x1b[31m[SISTEMA] Conexão com o cofre abortada.\x1b[0m`, playerData: player };
+            }
+
+            const guess = command;
+            if (guess.length !== 3 || isNaN(guess)) {
+                return { text: `\x1b[33m[SISTEMA DE INVASÃO]\x1b[0m Digite 3 números (ex: 123) ou 'sair'.`, playerData: player };
+            }
+
+            player.hacking.attempts += 1;
+            
+            let exatos = 0; 
+            let parciais = 0;
+            let senhaArr = player.hacking.password.split('');
+            let palpiteArr = guess.split('');
+
+            for(let i=0; i<3; i++) {
+                if (palpiteArr[i] === senhaArr[i]) {
+                    exatos++;
+                    senhaArr[i] = null;
+                    palpiteArr[i] = null;
+                }
+            }
+            for(let i=0; i<3; i++) {
+                if (palpiteArr[i] !== null && senhaArr.includes(palpiteArr[i])) {
+                    parciais++;
+                    senhaArr[senhaArr.indexOf(palpiteArr[i])] = null;
+                }
+            }
+
+            if (exatos === 3) {
+                player.hacking.active = false;
+                player.inventory.cofre_fechado -= 1;
+                
+                const lootSucata = Math.floor(Math.random() * 50) + 50;
+                player.inventory.metal_base += lootSucata;
+                player.inventory.circuitos += 5;
+                
+                responseText = `\x1b[1;32m[ACESSO CONCEDIDO]\x1b[0m\nA porta pesada se abre com um assobio de ar pressurizado.\nVocê saqueou: ${lootSucata}x metal_base e 5x circuitos!`;
+            } else if (player.hacking.attempts >= 5) {
+                player.hacking.active = false;
+                player.inventory.cofre_fechado -= 1;
+                player.status.hp -= 30;
+                responseText = `\x1b[1;41;37m [ PROTOCOLO DE AUTODESTRUIÇÃO ATIVADO ] \x1b[0m\nA senha incorreta ativou os explosivos do cofre. Você tomou 30 de dano!`;
+            } else {
+                responseText = `\x1b[36m[ANÁLISE DE CÓDIGO]\x1b[0m Números Exatos: \x1b[32m${exatos}\x1b[0m | Posição Errada: \x1b[33m${parciais}\x1b[0m\n\x1b[31mTentativas restantes: ${5 - player.hacking.attempts}\x1b[0m`;
+            }
+            await player.save();
+            return { text: responseText, playerData: player };
+        }
+
+        // ==========================================
         // SISTEMA 1: TRAVA DE COMBATE (Turnos)
         // ==========================================
         if (player.combatState.inCombat) {
@@ -19,6 +76,13 @@ const parser = {
                 const seuDano = player.equipment.weapon.atk + Math.floor(Math.random() * 4);
                 player.combatState.enemyHp -= seuDano;
                 responseText = `\x1b[33m[COMBATE] Você ataca com ${player.equipment.weapon.name} e causa ${seuDano} de dano!\x1b[0m\n`;
+
+                // --- ATAQUE DO DRONE ---
+                if (player.inventory.drone > 0 && player.combatState.enemyHp > 0) {
+                    const droneDano = 15;
+                    player.combatState.enemyHp -= droneDano;
+                    responseText += `\x1b[36m[DRONE] O seu companheiro robótico dispara um laser! (+${droneDano} Dano)\x1b[0m\n`;
+                }
 
                 if (player.combatState.enemyHp <= 0) {
                     const xpGanha = enemy.xpReward || 20;
@@ -37,7 +101,7 @@ const parser = {
                         if (player.quest.progress >= player.quest.goal) {
                             player.inventory.circuitos += player.quest.rewardCirc;
                             responseText += `\x1b[1;32m[MISSÃO CONCLUÍDA!] O Terminal transferiu ${player.quest.rewardCirc}x circuitos para ti.\x1b[0m\n`;
-                            player.quest.active = false; // Reseta a missão
+                            player.quest.active = false; 
                         }
                     }
 
@@ -98,34 +162,30 @@ const parser = {
                     "status                - Exibe atributos, nível e inventário",
                     "mapa                  - Exibe o radar local e bases",
                     "norte/sul/leste/oeste - Navega pelo mapa",
-                    "explorar              - Busca loot ou inimigos (Custa 5 Eng)",
+                    "explorar              - Busca loot ou inimigos",
                     "mercado               - Abre a loja da Zona Morta",
                     "comprar [item]        - Adquire um item do mercado",
                     "usar [item]           - Consome um item",
                     "reciclar              - Transforma 5 sucata em 1 circuito",
-                    "craft [item]          - Forja itens (ex: craft faca, craft bomba)",
-                    "construir base        - Cria zona segura (50 suc, 10 circ)",
+                    "craft [item]          - faca, bomba, camera, drone",
+                    "construir [tipo]      - base, extrator",
                     "defender              - Instala torretas na base (Custa 30 suc, 5 circ)",
-                    "craft camera          - Forja uma câmera de segurança (10 suc, 3 circ)",
                     "instalar camera       - Instala na sua base (Máx: 8)",
                     "cam [1-8]             - Acessa o feed de vídeo da câmera instalada",
+                    "hackear cofre         - Tenta abrir um cofre_fechado",
                     "viajar [world_001/2]  - Viaja entre mapas (world_002 exige Lvl 5)",
                     "ranking               - Mostra os 5 jogadores mais fortes",
-                    "base depositar [qtd]  - Guarda sucata na tua base",
-                    "base sacar [qtd]      - Retira sucata da tua base",
+                    "base [ação]           - status, depositar, sacar, recolher",
                     "clan criar [nome]     - Funda uma fação (Custa 5 circuitos)",
                     "clan juntar [nome]    - Entra numa fação existente",
                     "invadir               - Ataca base inimiga (Usa bomba se tiveres)",
                     "clan / limpar / gritar- Comandos sociais e de sistema",
                     "mercado livre         - Vê os itens vendidos por outros jogadores",
-                    "vender [item] [qtd] [preço] - Coloca um item à venda no mercado",
+                    "vender [item] [q] [p] - Coloca um item à venda no mercado",
                     "missoes               - Vê ou pede um contrato de caça"
                 ]);
                 break;
 
-            // ==========================================
-            // SISTEMA DE CONTRATOS (MISSÕES)
-            // ==========================================
             case 'missoes':
                 if (!player.quest || !player.quest.active) {
                     const targets = ['rat_mutante', 'escorpiao', 'saqueador'];
@@ -147,6 +207,21 @@ const parser = {
                 }
                 break;
 
+            // ==========================================
+            // SISTEMA HACKER
+            // ==========================================
+            case 'hackear':
+                if (args[1] === 'cofre') {
+                    if (player.inventory.cofre_fechado > 0) {
+                        const pwd = Math.floor(Math.random() * 900 + 100).toString();
+                        player.hacking = { active: true, password: pwd, attempts: 0 };
+                        responseText = `\x1b[1;36m[SISTEMA DE INVASÃO INICIADO]\x1b[0m\nO cofre está bloqueado por uma senha de 3 dígitos numéricos.\nDigite o seu palpite ou 'sair' para abortar. (Aviso: 5 erros = BOOM)`;
+                    } else {
+                        responseText = `\x1b[31m[ERRO] Você não possui nenhum cofre_fechado.\x1b[0m`;
+                    }
+                } else responseText = `[USO] hackear cofre`;
+                break;
+
             case 'status':
                 const statusLines = [
                     `Nível: ${player.status.level}  |  XP: ${player.status.xp}`,
@@ -158,9 +233,12 @@ const parser = {
                     `> Sucata (metal_base): ${player.inventory.metal_base}`,
                     `> Circuitos          : ${player.inventory.circuitos}`,
                     `> Água Pura          : ${player.inventory.agua_pura}`,
+                    `> Cofres Fechados    : ${player.inventory.cofre_fechado || 0}`,
                     `-------------------------------------------`,
                     `EQUIPAMENTO ESPECIAL:`,
+                    `> Drone Assistente   : ${player.inventory.drone ? 'Online 🔋' : 'Offline'}`,
                     `> Bombas Caseiras    : ${player.inventory.bombas || 0} unit.`, 
+                    `> Câmeras p/ Instalar: ${player.inventory.camera || 0} unit.`,
                     `> Núcleo de Energia  : ${player.inventory.nucleo_energia || 0} unit.`, 
                     `> Fita (holofita_01) : ${player.inventory.holofita_01 ? '1' : '0'} unit.`, 
                     `-------------------------------------------`,
@@ -184,8 +262,24 @@ const parser = {
                     } else {
                         responseText = `\x1b[31m[ERRO] Recursos insuficientes. Precisas de 50x metal_base e 10x circuitos.\x1b[0m`;
                     }
-                } else {
-                    responseText = `[USO] Digite 'construir base'`;
+                } 
+                else if (args[1] === 'extrator') {
+                    const baseExt = await Base.findOne({ x: player.location.x, y: player.location.y, owner: player.username });
+                    if (!baseExt) {
+                        responseText = `\x1b[31m[ERRO] Extratores só podem ser construídos dentro da tua base.\x1b[0m`;
+                        break;
+                    }
+                    if (player.inventory.metal_base >= 80 && player.inventory.circuitos >= 15) {
+                        player.inventory.metal_base -= 80;
+                        player.inventory.circuitos -= 15;
+                        baseExt.extratores = (baseExt.extratores || 0) + 1;
+                        baseExt.lastExtracted = new Date();
+                        await baseExt.save();
+                        responseText = `\x1b[32m[INDÚSTRIA] Extrator Automático instalado! (${baseExt.extratores} Ativos).\x1b[0m\nEles farmam sucata offline. Use 'base recolher' de vez em quando!`;
+                    } else responseText = `\x1b[31m[ERRO] Custo do Extrator: 80x metal_base, 15x circuitos.\x1b[0m`;
+                }
+                else {
+                    responseText = `[USO] construir base | construir extrator`;
                 }
                 break;
                 
@@ -202,9 +296,29 @@ const parser = {
                 if (acaoBase === 'status') {
                     responseText = ascii.drawBox(`COFRE: ${minhaBase.name}`, [
                         `Sucata (metal_base): ${minhaBase.inventory.metal_base}`,
-                        `Circuitos          : ${minhaBase.inventory.circuitos}`
+                        `Circuitos          : ${minhaBase.inventory.circuitos}`,
+                        `Nível Defesa       : ${minhaBase.defenseLevel || 0}/4 Torretas`,
+                        `CCTV Ativas        : ${minhaBase.cameras || 0}/8 Câmeras`,
+                        `Extratores         : ${minhaBase.extratores || 0} Operando`
                     ]);
                 } 
+                else if (acaoBase === 'recolher') {
+                    if ((minhaBase.extratores || 0) > 0) {
+                        // Farm: 2 sucatas por minuto por extrator
+                        const minutosPassados = Math.floor((new Date() - (minhaBase.lastExtracted || new Date())) / 60000);
+                        if (minutosPassados > 0) {
+                            const ganho = minutosPassados * minhaBase.extratores * 2;
+                            minhaBase.inventory.metal_base += ganho;
+                            minhaBase.lastExtracted = new Date();
+                            await minhaBase.save();
+                            responseText = `\x1b[1;32m[INDÚSTRIA] As máquinas trabalharam! Foram recolhidas ${ganho}x sucatas para o cofre.\x1b[0m`;
+                        } else {
+                            responseText = `\x1b[33m[INDÚSTRIA] Os extratores ainda estão processando. Volte mais tarde.\x1b[0m`;
+                        }
+                    } else {
+                        responseText = `\x1b[31m[ERRO] Você não construiu nenhum extrator nesta base.\x1b[0m`;
+                    }
+                }
                 else if (acaoBase === 'depositar' && qtd > 0) {
                     if (player.inventory.metal_base >= qtd) {
                         player.inventory.metal_base -= qtd;
@@ -222,7 +336,7 @@ const parser = {
                     } else responseText = `\x1b[31m[ERRO] O cofre não tem essa quantidade de sucata.\x1b[0m`;
                 }
                 else {
-                    responseText = `[USO] base status | base depositar [qtd] | base sacar [qtd]`;
+                    responseText = `[USO] base status | base depositar [qtd] | base sacar [qtd] | base recolher`;
                 }
                 break;
 
@@ -246,6 +360,7 @@ const parser = {
                     responseText = `\x1b[31m[ERRO] Recursos insuficientes (Custo: 30x suc, 5x circ).\x1b[0m`;
                 }
                 break;
+                
             // ==========================================
             // SISTEMA DE CÂMERAS CCTV (VIGILÂNCIA)
             // ==========================================
@@ -285,14 +400,15 @@ const parser = {
                     responseText = `\x1b[31m[ERRO] Câmera ${args[1] || '?'} inválida ou não instalada. Você possui ${baseParaOlhar.cameras || 0} câmeras ativas.\x1b[0m`;
                     break;
                 }
+
                 const cenarioRandom = ascii.cameraViews[Math.floor(Math.random() * ascii.cameraViews.length)];
-        
+                
                 let uiCamera = [
                     `\x1b[1;30m[=============================================]\x1b[0m`,
                     `\x1b[1;30m[\x1b[0m \x1b[32mCCTV FEED - CAM 0${numCam}\x1b[0m  |  \x1b[31mREC *\x1b[0m  |  ${new Date().toLocaleTimeString()} \x1b[1;30m]\x1b[0m`,
                     `\x1b[1;30m[---------------------------------------------]\x1b[0m`
                 ];
-                
+               
                 cenarioRandom.forEach(linha => {
                     uiCamera.push(`\x1b[1;30m[\x1b[0m \x1b[90m${linha}\x1b[0m \x1b[1;30m]\x1b[0m`);
                 });
@@ -342,7 +458,7 @@ const parser = {
                     const qtdItem = parseInt(args[4]) || 1;
                     
                     if(!alvoNome || !itemNome) {
-                        responseText = `\x1b[33m[USO]\x1b[0m admin dar <jogador> <item> <qtd>\nItens: metal_base, circuitos, agua_pura, bombas, nucleo_energia, holofita_01`;
+                        responseText = `\x1b[33m[USO]\x1b[0m admin dar <jogador> <item> <qtd>\nItens: metal_base, circuitos, agua_pura, bombas, nucleo_energia, holofita_01, cofre_fechado`;
                         break;
                     }
                     
@@ -393,9 +509,6 @@ const parser = {
                 }
                 break;
 
-            // ==========================================
-            // SISTEMA DE CLÃS E COFRE
-            // ==========================================
             case 'clan':
                 const acaoClan = args[1];
                 const nomeClan = args.slice(2).join(' ');
@@ -619,15 +732,12 @@ const parser = {
                 }
                 break;
             
-            // ==========================================
-            // SISTEMA DE VENDAS (MERCADO LIVRE)
-            // ==========================================
             case 'vender':
                 const itemVender = args[1];
                 const qtdVender = parseInt(args[2]);
                 const precoVender = parseInt(args[3]);
 
-                const itensValidos = ['metal_base', 'circuitos', 'agua_pura', 'bombas', 'nucleo_energia', 'holofita_01'];
+                const itensValidos = ['metal_base', 'circuitos', 'agua_pura', 'bombas', 'nucleo_energia', 'holofita_01', 'cofre_fechado'];
 
                 if (!itemVender || !qtdVender || !precoVender || qtdVender <= 0 || precoVender <= 0) {
                     responseText = `\x1b[33m[USO]\x1b[0m vender <item> <quantidade> <preco_em_sucata>\nExemplo: vender nucleo_energia 1 500`;
@@ -722,8 +832,8 @@ const parser = {
                 break;
 
             case 'craft':
-                const item = args[1];
-                if (item === 'faca') {
+                const itemCraft = args[1];
+                if (itemCraft === 'faca') {
                     if (player.inventory.metal_base >= 10 && player.inventory.circuitos >= 2) {
                         player.inventory.metal_base -= 10;
                         player.inventory.circuitos -= 2;
@@ -731,7 +841,7 @@ const parser = {
                         responseText = `\x1b[32m[CRAFT] SUCESSO! Forjaste uma FACA TÁTICA (ATK+15).\x1b[0m`;
                     } else responseText = `[ERRO] Recursos insuficientes (Custo: 10x suc, 2x circ).`;
                 } 
-                else if (item === 'bomba') {
+                else if (itemCraft === 'bomba') {
                     if (player.inventory.metal_base >= 15 && player.inventory.circuitos >= 5) {
                         player.inventory.metal_base -= 15;
                         player.inventory.circuitos -= 5;
@@ -739,7 +849,7 @@ const parser = {
                         responseText = `\x1b[32m[CRAFT] SUCESSO! Fabricaste uma BOMBA CASEIRA.\x1b[0m\n(Será usada automaticamente na tua próxima invasão para +40% de chance!)`;
                     } else responseText = `[ERRO] Recursos insuficientes (Custo: 15x suc, 5x circ).`;
                 }
-                else if (item === 'camera') {
+                else if (itemCraft === 'camera') {
                     if (player.inventory.metal_base >= 10 && player.inventory.circuitos >= 3) {
                         player.inventory.metal_base -= 10;
                         player.inventory.circuitos -= 3;
@@ -747,13 +857,25 @@ const parser = {
                         responseText = `\x1b[32m[CRAFT] SUCESSO! Fabricaste um MÓDULO DE CÂMERA (CCTV).\x1b[0m\n(Vai até a tua base e usa 'instalar camera')`;
                     } else responseText = `[ERRO] Recursos insuficientes (Custo: 10x suc, 3x circ).`;
                 }
+                else if (itemCraft === 'drone') {
+                    if (player.inventory.metal_base >= 100 && player.inventory.circuitos >= 20 && player.inventory.nucleo_energia >= 1) {
+                        player.inventory.metal_base -= 100;
+                        player.inventory.circuitos -= 20;
+                        player.inventory.nucleo_energia -= 1;
+                        player.inventory.drone = 1;
+                        responseText = `\x1b[1;36m[CRAFT ÉPICO] SUCESSO! Você reativou um DRONE DE COMPANHIA!\x1b[0m\nEle vai te ajudar em combate e economizar energia na exploração.`;
+                    } else responseText = `[ERRO] Custo do Drone: 100x suc, 20x circ, 1x nucleo_energia.`;
+                }
                 else {
-                    responseText = `[CRAFT] Receitas válidas: 'craft faca', 'craft bomba'`;
+                    responseText = `[CRAFT] Receitas válidas: 'craft faca', 'craft bomba', 'craft camera', 'craft drone'`;
                 }
                 break;
             
             case 'explorar':
-                if (player.status.energy < 5) {
+                // DRONE reduz o custo de explorar de 5 para 3 de energia!
+                const custoEnergia = (player.inventory.drone || 0) > 0 ? 3 : 5;
+
+                if (player.status.energy < custoEnergia) {
                     responseText = `\x1b[31m[AVISO] Energia insuficiente.\x1b[0m`;
                     break;
                 }
@@ -766,7 +888,6 @@ const parser = {
                     break; 
                 }
 
-                // Proteção para caso o jogador explore antes do servidor declarar o clima
                 if (global.mundo && global.mundo.clima === 'TEMPESTADE_RAD') {
                     player.status.hp -= 15;
                     responseText += `\x1b[1;31m[RADIAÇÃO] Estás exposto à tempestade! Sofreste 15 de dano radiativo.\x1b[0m\n`;
@@ -779,7 +900,7 @@ const parser = {
                     }
                 }
 
-                player.status.energy -= 5;
+                player.status.energy -= custoEnergia;
 
                 if (player.location.x === 15 && player.location.y === 15) {
                     player.combatState.inCombat = true;
@@ -794,8 +915,7 @@ const parser = {
 
                 const sorte = Math.random();
                 
-                if (sorte < 0.4) {
-                    // Proteção extra para o multiplicador de noite
+                if (sorte < 0.45) { // Aumentei a chance para comportar os novos itens
                     let multiplicador = (global.mundo && global.mundo.periodo === 'NOITE') ? 2 : 1;
                     const sucata = (Math.floor(Math.random() * 5) + 1) * multiplicador;
                     
@@ -804,13 +924,10 @@ const parser = {
                     
                     const chanceDrop = Math.floor(Math.random() * 100) + 1;
                     
-                    // 1. Drop da Holofita
                     if (chanceDrop >= 98 && !player.inventory.holofita_01) {
                         player.inventory.holofita_01 = 1;
                         responseText += `\n\x1b[1;35m[MISTÉRIO] Escavaste uma cassete antiga coberta de pó: "holofita_01".\x1b[0m`;
                     }
-                    
-                    // 2. Drop do Núcleo e Circuitos (Restaurado)
                     if (chanceDrop >= 96) {
                         player.inventory.nucleo_energia = (player.inventory.nucleo_energia || 0) + 1;
                         responseText += `\n\x1b[1;33m[DROP ÉPICO!] Você escavou um compartimento secreto e encontrou 1x NÚCLEO DE ENERGIA!\x1b[0m`;
@@ -818,7 +935,11 @@ const parser = {
                         if (global.adminLog) adminLog('SISTEMA', `${player.username} encontrou um NÚCLEO DE ENERGIA!`);
                         io.emit('output', `\r\n\x1b[1;33m[RÁDIO GLOBAL] Rumores dizem que ${player.username} encontrou um Núcleo de Energia nas ruínas...\x1b[0m\r\n> `);
                     }
-                    else if (chanceDrop >= 81) {
+                    else if (chanceDrop >= 88) { // Drop do Cofre para hackear
+                        player.inventory.cofre_fechado = (player.inventory.cofre_fechado || 0) + 1;
+                        responseText += `\n\x1b[1;34m[ACHADO RARO] Você desenterrou um COFRE ANTIGO! (Use 'hackear cofre' na base para tentar abrir).\x1b[0m`;
+                    }
+                    else if (chanceDrop >= 75) {
                         player.inventory.circuitos += 1;
                         responseText += `\n\x1b[36m[DROP INCOMUM] Você encontrou 1x circuito intacto!\x1b[0m`;
                     }

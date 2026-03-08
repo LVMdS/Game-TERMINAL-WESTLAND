@@ -10,7 +10,9 @@ const BaseSchema = new mongoose.Schema({
         circuitos: { type: Number, default: 0 }
     },
     defenseLevel: { type: Number, default: 0 },
-    cameras: {type: Number, defaul: 0}
+    cameras: {type: Number, defaul: 0},
+    extratores: { type: Number, default: 0 },
+    lastExtracted: { type: Date, default: Date.now },
 });
 
 module.exports = mongoose.model('Base', BaseSchema);

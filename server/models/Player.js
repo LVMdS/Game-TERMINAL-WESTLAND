@@ -14,6 +14,11 @@ const PlayerSchema = new mongoose.Schema({
         xp: { type: Number, default: 0 }, 
         nextLevelXp: { type: Number, default: 50 }
     },
+    hacking: {
+        active: { type: Boolean, default: false },
+        password: { type: String, default: "" },
+        attempts: { type: Number, default: 0 }
+    },
     location: {
         world: { type: String, default: 'world_001' },
         x: { type: Number, default: 10 },
@@ -27,6 +32,8 @@ const PlayerSchema = new mongoose.Schema({
         nucleo_energia: {type: Number, default: 0},
         holofita_01: { type: Number, default: 0 },
         camera: { type: Number, default: 0 },
+        drone: { type: Number, default: 0 },
+        cofre_fechado: { type: Number, default: 0 },
         items: [] 
     },
     quest: {
