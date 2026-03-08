@@ -69,11 +69,7 @@ Se você deseja rodar o seu próprio servidor de Terminal Wasteland:
     Certifique-se de que o MongoDB está rodando na sua máquina na porta 27017 (ou configure sua string no server.js).
 
 ## Acesse o Terminal:
-Abra seu navegador em http://localhost:3000, clique em qualquer lugar da tela preta para habilitar os recursos de som,
-e digite registrar <seu_nome> e 
-<senha>.
-
-
+Abra seu navegador em http://localhost:3000, e siga as instruções de registro ou login.
 
 
 **"A humanidade precisa de sucata. O terminal está esperando por você." - Desenvolvido por Leonardo De Souza.**
