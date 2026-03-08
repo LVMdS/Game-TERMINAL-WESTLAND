@@ -60,16 +60,17 @@ Se você deseja rodar o seu próprio servidor de Terminal Wasteland:
    ```bash
    git clone [https://github.com/SeuUsuario/Terminal-Wasteland.git](https://github.com/SeuUsuario/Terminal-Wasteland.git)
    cd Terminal-Wasteland
-
+    ```
     ```bash
         npm install
+    ```
 
 **inicie o Banco de Dados:**
     Certifique-se de que o MongoDB está rodando na sua máquina na porta 27017 (ou configure sua string no server.js).
 
 ## Acesse o Terminal:
 Abra seu navegador em http://localhost:3000, clique em qualquer lugar da tela preta para habilitar os recursos de som,
-e digite registrar <seu_nome> <senha>.
+e digite registrar <seu_nome> e <senha>.
 
 
 
