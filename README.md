@@ -61,6 +61,7 @@ Se você deseja rodar o seu próprio servidor de Terminal Wasteland:
    git clone [https://github.com/SeuUsuario/Terminal-Wasteland.git](https://github.com/SeuUsuario/Terminal-Wasteland.git)
    cd Terminal-Wasteland
     ```
+    **Instale as dependencias**
     ```bash
         npm install
     ```
