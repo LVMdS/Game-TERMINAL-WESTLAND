@@ -53,6 +53,31 @@ setInterval(() => {
     }
 }, 15 * 60 * 1000);
 
+// ==========================================
+// WORLD BOSS (EVENTO GLOBAL DE RAID)
+// ==========================================
+global.worldBoss = { 
+    active: false, 
+    name: 'LEVIATÃ DE FERRO', 
+    hp: 0, 
+    maxHp: 5000, 
+    x: 0, 
+    y: 0, 
+    world: 'world_002' 
+};
+
+// Verifica a cada 45 minutos se o Boss deve aparecer
+setInterval(() => {
+    if (!global.worldBoss.active && Math.random() > 0.7) { 
+        global.worldBoss.active = true;
+        global.worldBoss.hp = global.worldBoss.maxHp;
+        global.worldBoss.x = Math.floor(Math.random() * 20) - 10; 
+        global.worldBoss.y = Math.floor(Math.random() * 20) - 10; 
+
+        io.emit('output', `\r\n\x1b[1;41;37m [ ALERTA VERMELHO ] ANOMALIA COLOSSAL DETETADA! \x1b[0m\r\n\x1b[31mO ${global.worldBoss.name} emergiu em [${global.worldBoss.x}, ${global.worldBoss.y}] na área world_002! Juntem-se para o destruir!\x1b[0m\r\n> `);
+    }
+}, 45 * 60 * 1000);
+
 // --- LÓGICA DO SOCKET.IO (Tempo Real) ---
 io.on('connection', (socket) => {
     console.log(`[CONN] Nova conexão: ${socket.id}`);

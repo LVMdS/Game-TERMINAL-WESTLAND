@@ -159,31 +159,187 @@ const parser = {
                 break;
             case 'ajuda':
                 responseText = ascii.drawBox("COMANDOS DO SISTEMA", [
-                    "status                - Exibe atributos, nível e inventário",
-                    "mapa                  - Exibe o radar local e bases",
+                    "status / mapa / base  - Sistemas principais",
                     "norte/sul/leste/oeste - Navega pelo mapa",
                     "explorar              - Busca loot ou inimigos",
                     "mercado               - Abre a loja da Zona Morta",
-                    "comprar [item]        - Adquire um item do mercado",
+                    "comprar / vender      - Adquire ou vende um item",
                     "usar [item]           - Consome um item",
                     "reciclar              - Transforma 5 sucata em 1 circuito",
                     "craft [item]          - faca, bomba, camera, drone",
                     "construir [tipo]      - base, extrator",
-                    "defender              - Instala torretas na base (Custa 30 suc, 5 circ)",
-                    "instalar camera       - Instala na sua base (Máx: 8)",
-                    "cam [1-8]             - Acessa o feed de vídeo da câmera instalada",
+                    "defender              - Instala torretas na base",
+                    "instalar / cam [1-8]  - Instala e acessa CCTV na base",
                     "hackear cofre         - Tenta abrir um cofre_fechado",
-                    "viajar [world_001/2]  - Viaja entre mapas (world_002 exige Lvl 5)",
+                    "clinica               - Vê loja de implantes cibernéticos",
+                    "implantar [tipo]      - Instala uma melhoria permanente",
+                    "caça [nome] [sucata]  - Põe  recompensa na cabeça de alguém",
+                    "assassinar [nome]     - Tenta matar player na mesma coordenada",
+                    "atacar leviata        - Ataca o World Boss(quando ocorrer)",
+                    "viajar [world_001/2]  - Viaja entre mapas(world_002 no Lvl 5)",
                     "ranking               - Mostra os 5 jogadores mais fortes",
-                    "base [ação]           - status, depositar, sacar, recolher",
-                    "clan criar [nome]     - Funda uma fação (Custa 5 circuitos)",
-                    "clan juntar [nome]    - Entra numa fação existente",
-                    "invadir               - Ataca base inimiga (Usa bomba se tiveres)",
-                    "clan / limpar / gritar- Comandos sociais e de sistema",
-                    "mercado livre         - Vê os itens vendidos por outros jogadores",
-                    "vender [item] [q] [p] - Coloca um item à venda no mercado",
-                    "missoes               - Vê ou pede um contrato de caça"
+                    "clan [ação]           - criar, juntar, status, depositar",
+                    "invadir               - Ataca base inimiga local",
+                    "missoes               - Vê ou pede um contrato de caça",
+                    "base [ação]           - status, recolher",
+                    "base depositar/sacar  - Ex: base depositar bio_chips 2",
                 ]);
+                break;
+
+            // ==========================================
+            // COMBATE GLOBAL: WORLD BOSS
+            // ==========================================
+            case 'atacar':
+                if (args[1] === 'leviata') {
+                    if (!global.worldBoss || !global.worldBoss.active) {
+                        responseText = `\x1b[31m[ERRO] O ${global.worldBoss.name} não está ativo neste momento.\x1b[0m`;
+                        break;
+                    }
+                    if (player.location.world !== global.worldBoss.world || player.location.x !== global.worldBoss.x || player.location.y !== global.worldBoss.y) {
+                        responseText = `\x1b[31m[ERRO] Não estás nas coordenadas do Boss! Ele está em [${global.worldBoss.x}, ${global.worldBoss.y}] no ${global.worldBoss.world}.\x1b[0m`;
+                        break;
+                    }
+
+                    const meuDano = player.equipment.weapon.atk + Math.floor(Math.random() * 10);
+                    global.worldBoss.hp -= meuDano;
+                    
+                    responseText = `\x1b[1;33m[RAID GLOBAL] Disparaste contra o ${global.worldBoss.name} causando ${meuDano} de dano!\x1b[0m\nHP do Boss: ${global.worldBoss.hp}/${global.worldBoss.maxHp}`;
+                    
+                    if (global.worldBoss.hp <= 0) {
+                        global.worldBoss.active = false;
+                        player.inventory.nucleo_energia = (player.inventory.nucleo_energia || 0) + 2;
+                        player.inventory.bio_chips = (player.inventory.bio_chips || 0) + 5;
+                        player.inventory.metal_base += 500;
+                        
+                        io.emit('output', `\r\n\x1b[1;32m[VITÓRIA GLOBAL] O ${global.worldBoss.name} FOI DERROTADO!\x1b[0m\n\x1b[36mO golpe final foi dado por ${player.username}! A zona está a salvo.\x1b[0m\r\n> `);
+                        responseText += `\n\x1b[32m[RECOMPENSA DE ABATE] Recebeste 500 sucata, 2 Núcleos de Energia e 5 Bio-Chips!\x1b[0m`;
+                    } else {
+                        player.status.hp -= 20;
+                        responseText += `\n\x1b[31m[CONTRA-ATAQUE] O Leviatã balança os seus tentáculos de metal! Sofres 20 de dano!\x1b[0m`;
+                        if (player.status.hp <= 0) {
+                            player.status.hp = player.status.maxHp; player.location.x = 10; player.location.y = 10;
+                            responseText += `\n[SISTEMA] Foste esmagado. Clonagem ativada na base.`;
+                        }
+                    }
+                } else {
+                    responseText = `[USO] 'atacar leviata' (Somente quando o evento global estiver ativo). Para combates normais, use 'explorar'.`;
+                }
+                break;
+
+            // ==========================================
+            // SISTEMA DE CAÇAS (BOUNTY) & PVP
+            // ==========================================
+            case 'caca':
+                const alvoCaca = args[1];
+                const valorCaca = parseInt(args[2]);
+
+                if (!alvoCaca || isNaN(valorCaca) || valorCaca <= 0) {
+                    responseText = `[USO] caça <nome_do_jogador> <valor_em_sucata>\nExemplo: caça Leonardo 200`;
+                    break;
+                }
+                if (player.inventory.metal_base < valorCaca) {
+                    responseText = `\x1b[31m[ERRO] Não tens ${valorCaca} de sucata para pagar esta recompensa.\x1b[0m`;
+                    break;
+                }
+
+                const procurado = await Player.findOne({ username: new RegExp('^' + alvoCaca + '$', 'i') });
+                if (!procurado) {
+                    responseText = `\x1b[31m[ERRO] Jogador '${alvoCaca}' não encontrado.\x1b[0m`;
+                    break;
+                }
+
+                player.inventory.metal_base -= valorCaca;
+                procurado.bounty = (procurado.bounty || 0) + valorCaca;
+                await procurado.save();
+
+                responseText = `\x1b[32m[CONTRATO EMITIDO] Pagaste ${valorCaca} sucata pela cabeça de ${procurado.username}.\x1b[0m`;
+                io.emit('output', `\r\n\x1b[1;33m[SINDICATO DOS CAÇADORES] NOVA RECOMPENSA: ${procurado.bounty} sucata pela cabeça de ${procurado.username}!\x1b[0m\r\n> `);
+                break;
+
+            case 'assassinar':
+                const alvoAssassinar = args[1];
+                if (!alvoAssassinar) {
+                    responseText = `[USO] assassinar <nome_do_jogador>`;
+                    break;
+                }
+                if (alvoAssassinar.toLowerCase() === player.username.toLowerCase()) {
+                    responseText = `\x1b[31m[ERRO] Não te podes auto-assassinar.\x1b[0m`;
+                    break;
+                }
+
+                const vitima = await Player.findOne({ username: new RegExp('^' + alvoAssassinar + '$', 'i') });
+                if (!vitima) {
+                    responseText = `\x1b[31m[ERRO] Alvo não encontrado no banco de dados.\x1b[0m`;
+                    break;
+                }
+                if (vitima.location.world !== player.location.world || vitima.location.x !== player.location.x || vitima.location.y !== player.location.y) {
+                    responseText = `\x1b[31m[ERRO] O alvo não está nas tuas coordenadas atuais [${player.location.x}, ${player.location.y}].\x1b[0m`;
+                    break;
+                }
+
+                const hit = (player.equipment.weapon.atk + Math.floor(Math.random()*10)) - (vitima.equipment.armor.def);
+                if (hit > 20) {
+                    const premio = vitima.bounty || 0;
+                    player.inventory.metal_base += premio;
+                    vitima.bounty = 0;
+                    
+                    vitima.location.x = 10; vitima.location.y = 10;
+                    vitima.inventory.metal_base = Math.floor(vitima.inventory.metal_base * 0.5); 
+                    await vitima.save();
+
+                    responseText = `\x1b[1;31m[ASSASSINATO BEM SUCEDIDO]\x1b[0m\nEliminaste ${vitima.username} a sangue frio!`;
+                    if (premio > 0) responseText += `\n\x1b[32mReivindicaste a recompensa de ${premio} sucata!\x1b[0m`;
+                    
+                    io.emit('output', `\r\n\x1b[1;31m[SISTEMA GLOBAL] ${vitima.username} foi assassinado por ${player.username}!\x1b[0m\r\n> `);
+                    if (vitima.socketId) io.to(vitima.socketId).emit('output', `\r\n\x1b[1;41;37m [ ALERTA ] FOSTE ASSASSINADO POR ${player.username}! \x1b[0m\r\nPerdeste metade da tua sucata e renasceste na base.\r\n> `);
+                } else {
+                    player.status.hp -= 25;
+                    responseText = `\x1b[31m[FALHA] ${vitima.username} defendeu-se e revidou! Sofreste 25 de dano.\x1b[0m`;
+                }
+                break;
+
+            // ==========================================
+            // SISTEMA DE IMPLANTES (SKILL TREE)
+            // ==========================================
+            case 'clinica':
+                responseText = ascii.drawBox("CLÍNICA CLANDESTINA", [
+                    "Moeda aceita: bio_chips (Encontrados ao explorar)",
+                    "-----------------------------------------------",
+                    "1. pernas       - 3 bio_chips (Andar gasta 1 de Energia, não 2)",
+                    "2. optica       - 5 bio_chips (+15% de chance de achar itens/cofres)",
+                    "3. exoesqueleto - 8 bio_chips (+50 de HP Máximo permanente)",
+                    "-----------------------------------------------",
+                    "Digite 'implantar [nome_do_implante]' para instalar."
+                ]);
+                break;
+
+            case 'implantar':
+                const tipoImp = args[1];
+                if (!player.implants) player.implants = { pernas: false, optica: false, exoesqueleto: false };
+
+                if (tipoImp === 'pernas') {
+                    if (player.implants.pernas) responseText = `[ERRO] Já tens pernas cibernéticas.`;
+                    else if ((player.inventory.bio_chips || 0) >= 3) {
+                        player.inventory.bio_chips -= 3; player.implants.pernas = true;
+                        responseText = `\x1b[32m[CIRURGIA CONCLUÍDA] Pernas Cibernéticas instaladas! Andar agora custa 1 de Energia.\x1b[0m`;
+                    } else responseText = `[ERRO] Precisas de 3 bio_chips.`;
+                }
+                else if (tipoImp === 'optica') {
+                    if (player.implants.optica) responseText = `[ERRO] Já tens ótica aprimorada.`;
+                    else if ((player.inventory.bio_chips || 0) >= 5) {
+                        player.inventory.bio_chips -= 5; player.implants.optica = true;
+                        responseText = `\x1b[32m[CIRURGIA CONCLUÍDA] Ótica instalada! +15% de probabilidade de achar itens valiosos.\x1b[0m`;
+                    } else responseText = `[ERRO] Precisas de 5 bio_chips.`;
+                }
+                else if (tipoImp === 'exoesqueleto') {
+                    if (player.implants.exoesqueleto) responseText = `[ERRO] Já tens o exoesqueleto.`;
+                    else if ((player.inventory.bio_chips || 0) >= 8) {
+                        player.inventory.bio_chips -= 8; player.implants.exoesqueleto = true;
+                        player.status.maxHp += 50; player.status.hp = player.status.maxHp;
+                        responseText = `\x1b[32m[CIRURGIA CONCLUÍDA] Exoesqueleto soldado aos ossos! HP Máximo aumentou em +50.\x1b[0m`;
+                    } else responseText = `[ERRO] Precisas de 8 bio_chips.`;
+                }
+                else responseText = `[USO] implantar <pernas|optica|exoesqueleto>`;
                 break;
 
             case 'missoes':
@@ -207,9 +363,6 @@ const parser = {
                 }
                 break;
 
-            // ==========================================
-            // SISTEMA HACKER
-            // ==========================================
             case 'hackear':
                 if (args[1] === 'cofre') {
                     if (player.inventory.cofre_fechado > 0) {
@@ -222,10 +375,26 @@ const parser = {
                 } else responseText = `[USO] hackear cofre`;
                 break;
 
-            case 'status':
+           case 'status':
+                const impList = [];
+                if(player.implants && player.implants.pernas) impList.push('Pernas Cib.');
+                if(player.implants && player.implants.optica) impList.push('Ótica Kiroshi');
+                if(player.implants && player.implants.exoesqueleto) impList.push('Exo-Armor');
+
+                // --- NOVO: VERIFICAÇÃO DE LOCALIZAÇÃO E BASE ---
+                const localAtual = await Base.findOne({ x: player.location.x, y: player.location.y });
+                let infoLocal = `Mundo: ${player.location.world.toUpperCase()} | Coord: [${player.location.x}, ${player.location.y}]`;
+                if (localAtual) {
+                    infoLocal = `\x1b[36mZONA SEGURA: ${localAtual.name} | Coord: [${player.location.x}, ${player.location.y}]\x1b[0m`;
+                }
+
                 const statusLines = [
                     `Nível: ${player.status.level}  |  XP: ${player.status.xp}`,
-                    `HP: ${player.status.hp}/100  |  Energia: ${player.status.energy}/100`,
+                    `HP: ${player.status.hp}/${player.status.maxHp}  |  Energia: ${player.status.energy}/${player.status.maxEnergy}`,
+                    `Prêmio na sua cabeça: \x1b[33m${player.bounty || 0} sucata\x1b[0m`,
+                    `-------------------------------------------`,
+                    `LOCALIZAÇÃO (GPS):`,
+                    `> ${infoLocal}`,
                     `-------------------------------------------`,
                     `ARMA: ${player.equipment.weapon.name} (ATK: ${player.equipment.weapon.atk})`,
                     `-------------------------------------------`,
@@ -233,9 +402,11 @@ const parser = {
                     `> Sucata (metal_base): ${player.inventory.metal_base}`,
                     `> Circuitos          : ${player.inventory.circuitos}`,
                     `> Água Pura          : ${player.inventory.agua_pura}`,
+                    `> Bio-Chips          : ${player.inventory.bio_chips || 0}`,
                     `> Cofres Fechados    : ${player.inventory.cofre_fechado || 0}`,
                     `-------------------------------------------`,
-                    `EQUIPAMENTO ESPECIAL:`,
+                    `EQUIPAMENTO ESPECIAL E CIBERNÉTICA:`,
+                    `> Implantes Ativos   : ${impList.join(', ') || 'Nenhum (100% Humano)'}`,
                     `> Drone Assistente   : ${player.inventory.drone ? 'Online 🔋' : 'Offline'}`,
                     `> Bombas Caseiras    : ${player.inventory.bombas || 0} unit.`, 
                     `> Câmeras p/ Instalar: ${player.inventory.camera || 0} unit.`,
@@ -279,13 +450,12 @@ const parser = {
                     } else responseText = `\x1b[31m[ERRO] Custo do Extrator: 80x metal_base, 15x circuitos.\x1b[0m`;
                 }
                 else {
-                    responseText = `[USO] construir base | construir extrator`;
+                    responseText = `[USO] Digite 'construir base' ou 'construir extrator'`;
                 }
                 break;
                 
             case 'base':
                 const acaoBase = args[1];
-                const qtd = parseInt(args[2]);
                 const minhaBase = await Base.findOne({ x: player.location.x, y: player.location.y });
 
                 if (!minhaBase || minhaBase.owner !== player.username) {
@@ -294,17 +464,25 @@ const parser = {
                 }
 
                 if (acaoBase === 'status') {
-                    responseText = ascii.drawBox(`COFRE: ${minhaBase.name}`, [
-                        `Sucata (metal_base): ${minhaBase.inventory.metal_base}`,
-                        `Circuitos          : ${minhaBase.inventory.circuitos}`,
+                    responseText = ascii.drawBox(`COFRE DA BASE: ${minhaBase.name}`, [
                         `Nível Defesa       : ${minhaBase.defenseLevel || 0}/4 Torretas`,
                         `CCTV Ativas        : ${minhaBase.cameras || 0}/8 Câmeras`,
-                        `Extratores         : ${minhaBase.extratores || 0} Operando`
+                        `Extratores         : ${minhaBase.extratores || 0} Operando`,
+                        `-------------------------------------------`,
+                        `ITENS ARMAZENADOS:`,
+                        `> Sucata (metal_base) : ${minhaBase.inventory.metal_base || 0}`,
+                        `> Circuitos           : ${minhaBase.inventory.circuitos || 0}`,
+                        `> Água Pura           : ${minhaBase.inventory.agua_pura || 0}`,
+                        `> Bombas Caseiras     : ${minhaBase.inventory.bombas || 0}`,
+                        `> Núcleo de Energia   : ${minhaBase.inventory.nucleo_energia || 0}`,
+                        `> Bio-Chips           : ${minhaBase.inventory.bio_chips || 0}`,
+                        `> Cofres Fechados     : ${minhaBase.inventory.cofre_fechado || 0}`,
+                        `> Câmeras / Drones    : ${minhaBase.inventory.camera || 0} / ${minhaBase.inventory.drone || 0}`,
+                        `> Holofitas           : ${minhaBase.inventory.holofita_01 || 0}`
                     ]);
                 } 
                 else if (acaoBase === 'recolher') {
                     if ((minhaBase.extratores || 0) > 0) {
-                        // Farm: 2 sucatas por minuto por extrator
                         const minutosPassados = Math.floor((new Date() - (minhaBase.lastExtracted || new Date())) / 60000);
                         if (minutosPassados > 0) {
                             const ganho = minutosPassados * minhaBase.extratores * 2;
@@ -319,24 +497,45 @@ const parser = {
                         responseText = `\x1b[31m[ERRO] Você não construiu nenhum extrator nesta base.\x1b[0m`;
                     }
                 }
-                else if (acaoBase === 'depositar' && qtd > 0) {
-                    if (player.inventory.metal_base >= qtd) {
-                        player.inventory.metal_base -= qtd;
-                        minhaBase.inventory.metal_base += qtd;
-                        await minhaBase.save();
-                        responseText = `\x1b[32m[COFRE] Depositaste ${qtd}x metal_base em segurança.\x1b[0m`;
-                    } else responseText = `\x1b[31m[ERRO] Não tens sucata suficiente no inventário.\x1b[0m`;
-                }
-                else if (acaoBase === 'sacar' && qtd > 0) {
-                    if (minhaBase.inventory.metal_base >= qtd) {
-                        minhaBase.inventory.metal_base -= qtd;
-                        player.inventory.metal_base += qtd;
-                        await minhaBase.save();
-                        responseText = `\x1b[32m[COFRE] Retiraste ${qtd}x metal_base do cofre.\x1b[0m`;
-                    } else responseText = `\x1b[31m[ERRO] O cofre não tem essa quantidade de sucata.\x1b[0m`;
+                else if (acaoBase === 'depositar' || acaoBase === 'sacar') {
+                    const itemAlvo = args[2];
+                    const qtdItem = parseInt(args[3]);
+                    
+                    const itensPermitidos = ['metal_base', 'circuitos', 'agua_pura', 'bombas', 'nucleo_energia', 'holofita_01', 'cofre_fechado', 'bio_chips', 'camera', 'drone'];
+
+                    if (!itemAlvo || isNaN(qtdItem) || qtdItem <= 0) {
+                        responseText = `\x1b[33m[USO]\x1b[0m base ${acaoBase} <item> <quantidade>\nExemplo: base ${acaoBase} agua_pura 2`;
+                        break;
+                    }
+
+                    if (!itensPermitidos.includes(itemAlvo)) {
+                        responseText = `\x1b[31m[ERRO] Item '${itemAlvo}' inválido para o cofre.\x1b[0m`;
+                        break;
+                    }
+
+                    if (acaoBase === 'depositar') {
+                        if ((player.inventory[itemAlvo] || 0) >= qtdItem) {
+                            player.inventory[itemAlvo] -= qtdItem;
+                            minhaBase.inventory[itemAlvo] = (minhaBase.inventory[itemAlvo] || 0) + qtdItem;
+                            await minhaBase.save();
+                            responseText = `\x1b[32m[COFRE] Depositaste ${qtdItem}x ${itemAlvo} em segurança.\x1b[0m`;
+                        } else {
+                            responseText = `\x1b[31m[ERRO] Não tens ${qtdItem}x ${itemAlvo} no inventário.\x1b[0m`;
+                        }
+                    } 
+                    else if (acaoBase === 'sacar') {
+                        if ((minhaBase.inventory[itemAlvo] || 0) >= qtdItem) {
+                            minhaBase.inventory[itemAlvo] -= qtdItem;
+                            player.inventory[itemAlvo] = (player.inventory[itemAlvo] || 0) + qtdItem;
+                            await minhaBase.save();
+                            responseText = `\x1b[32m[COFRE] Retiraste ${qtdItem}x ${itemAlvo} do cofre.\x1b[0m`;
+                        } else {
+                            responseText = `\x1b[31m[ERRO] O cofre não possui ${qtdItem}x ${itemAlvo}.\x1b[0m`;
+                        }
+                    }
                 }
                 else {
-                    responseText = `[USO] base status | base depositar [qtd] | base sacar [qtd] | base recolher`;
+                    responseText = `[USO] base status | base recolher | base depositar [item] [qtd] | base sacar [item] [qtd]`;
                 }
                 break;
 
@@ -361,9 +560,6 @@ const parser = {
                 }
                 break;
                 
-            // ==========================================
-            // SISTEMA DE CÂMERAS CCTV (VIGILÂNCIA)
-            // ==========================================
             case 'instalar':
                 if (args[1] === 'camera') {
                     const baseCam = await Base.findOne({ x: player.location.x, y: player.location.y, owner: player.username });
@@ -458,7 +654,7 @@ const parser = {
                     const qtdItem = parseInt(args[4]) || 1;
                     
                     if(!alvoNome || !itemNome) {
-                        responseText = `\x1b[33m[USO]\x1b[0m admin dar <jogador> <item> <qtd>\nItens: metal_base, circuitos, agua_pura, bombas, nucleo_energia, holofita_01, cofre_fechado`;
+                        responseText = `\x1b[33m[USO]\x1b[0m admin dar <jogador> <item> <qtd>\nItens: metal_base, circuitos, agua_pura, bombas, nucleo_energia, holofita_01, cofre_fechado, bio_chips`;
                         break;
                     }
                     
@@ -500,11 +696,21 @@ const parser = {
                         responseText = `[GOD MODE] Anúncio global disparado com sucesso.`;
                     }
                 }
+                else if (adminCmd === 'boss') {
+                    global.worldBoss.active = true;
+                    global.worldBoss.hp = global.worldBoss.maxHp;
+                    global.worldBoss.x = player.location.x;
+                    global.worldBoss.y = player.location.y;
+                    global.worldBoss.world = player.location.world;
+                    io.emit('output', `\r\n\x1b[1;41;37m [ ALERTA VERMELHO ] O ADMIN INVOCOU O ${global.worldBoss.name}! ELE ESTÁ NAS COORDENADAS [${global.worldBoss.x}, ${global.worldBoss.y}] (${global.worldBoss.world})! \x1b[0m\r\n> `);
+                    responseText = `[GOD MODE] World Boss invocado nas tuas coordenadas.`;
+                }
                 else {
                     responseText = ascii.drawBox("PAINEL DE ADMINISTRAÇÃO", [
                         "admin dar [jogador] [item] [qtd] - Spawna itens para alguém",
                         "admin tp [x] [y]                 - Teletransporte instantâneo",
-                        "admin anuncio [msg]              - Mensagem global do servidor"
+                        "admin anuncio [msg]              - Mensagem global do servidor",
+                        "admin boss                       - Invoca o Leviatã na sua posição"
                     ]);
                 }
                 break;
@@ -737,7 +943,7 @@ const parser = {
                 const qtdVender = parseInt(args[2]);
                 const precoVender = parseInt(args[3]);
 
-                const itensValidos = ['metal_base', 'circuitos', 'agua_pura', 'bombas', 'nucleo_energia', 'holofita_01', 'cofre_fechado'];
+                const itensValidos = ['metal_base', 'circuitos', 'agua_pura', 'bombas', 'nucleo_energia', 'holofita_01', 'cofre_fechado', 'bio_chips'];
 
                 if (!itemVender || !qtdVender || !precoVender || qtdVender <= 0 || precoVender <= 0) {
                     responseText = `\x1b[33m[USO]\x1b[0m vender <item> <quantidade> <preco_em_sucata>\nExemplo: vender nucleo_energia 1 500`;
@@ -809,11 +1015,14 @@ const parser = {
                 break;
 
             case 'norte': case 'sul': case 'leste': case 'oeste':
-                if (player.status.energy < 2) {
+                // O implante de pernas reduz o gasto de energia!
+                const custoMovimento = (player.implants && player.implants.pernas) ? 1 : 2;
+
+                if (player.status.energy < custoMovimento) {
                     responseText = `\x1b[31m[AVISO] Exaustão extrema. Impossível mover-se.\x1b[0m`;
                     break;
                 }
-                player.status.energy -= 2;
+                player.status.energy -= custoMovimento;
                 if (command === 'norte') player.location.y += 1;
                 if (command === 'sul') player.location.y -= 1;
                 if (command === 'leste') player.location.x += 1;
@@ -913,9 +1122,11 @@ const parser = {
                     break; 
                 }
 
-                const sorte = Math.random();
+                let sorte = Math.random();
+                // O Implante Ótico melhora a chance de achar itens em 15%
+                if (player.implants && player.implants.optica) sorte -= 0.15;
                 
-                if (sorte < 0.45) { // Aumentei a chance para comportar os novos itens
+                if (sorte < 0.45) { 
                     let multiplicador = (global.mundo && global.mundo.periodo === 'NOITE') ? 2 : 1;
                     const sucata = (Math.floor(Math.random() * 5) + 1) * multiplicador;
                     
@@ -928,18 +1139,22 @@ const parser = {
                         player.inventory.holofita_01 = 1;
                         responseText += `\n\x1b[1;35m[MISTÉRIO] Escavaste uma cassete antiga coberta de pó: "holofita_01".\x1b[0m`;
                     }
-                    if (chanceDrop >= 96) {
+                    else if (chanceDrop >= 96) {
                         player.inventory.nucleo_energia = (player.inventory.nucleo_energia || 0) + 1;
                         responseText += `\n\x1b[1;33m[DROP ÉPICO!] Você escavou um compartimento secreto e encontrou 1x NÚCLEO DE ENERGIA!\x1b[0m`;
                         
                         if (global.adminLog) adminLog('SISTEMA', `${player.username} encontrou um NÚCLEO DE ENERGIA!`);
                         io.emit('output', `\r\n\x1b[1;33m[RÁDIO GLOBAL] Rumores dizem que ${player.username} encontrou um Núcleo de Energia nas ruínas...\x1b[0m\r\n> `);
                     }
-                    else if (chanceDrop >= 88) { // Drop do Cofre para hackear
+                    else if (chanceDrop >= 88) { 
                         player.inventory.cofre_fechado = (player.inventory.cofre_fechado || 0) + 1;
                         responseText += `\n\x1b[1;34m[ACHADO RARO] Você desenterrou um COFRE ANTIGO! (Use 'hackear cofre' na base para tentar abrir).\x1b[0m`;
                     }
-                    else if (chanceDrop >= 75) {
+                    else if (chanceDrop >= 78) { 
+                        player.inventory.bio_chips = (player.inventory.bio_chips || 0) + 1;
+                        responseText += `\n\x1b[1;35m[TECNOLOGIA MÉDICA] Encontraste 1x bio_chip! Leva isso a uma clínica.\x1b[0m`;
+                    }
+                    else if (chanceDrop >= 65) {
                         player.inventory.circuitos += 1;
                         responseText += `\n\x1b[36m[DROP INCOMUM] Você encontrou 1x circuito intacto!\x1b[0m`;
                     }
