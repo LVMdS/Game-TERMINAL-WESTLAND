@@ -53,6 +53,12 @@
     <audio id="bgm" src="https://cdn.pixabay.com/audio/2022/11/22/audio_d07fa9c8dd.mp3" loop></audio>
     <audio id="typeSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_78f1e29c62.mp3"></audio>
 
+    <audio id="sfx-alarm" src="https://cdn.pixabay.com/audio/2021/08/04/audio_0625c1539c.mp3"></audio>
+    <audio id="sfx-boss" src="https://cdn.pixabay.com/audio/2022/01/18/audio_8cb0131454.mp3"></audio>
+    <audio id="sfx-mob" src="https://cdn.pixabay.com/audio/2021/08/09/audio_a1a2e3cd8c.mp3"></audio>
+    <audio id="sfx-bounty" src="https://cdn.pixabay.com/audio/2021/08/04/audio_bb630cc098.mp3"></audio>
+    <audio id="sfx-explosion" src="https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73467.mp3"></audio>
+
     <div id="terminal-container"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.1.0/lib/xterm.js"></script>
@@ -63,7 +69,7 @@
         // --- CONFIGURAÇÃO DE ÁUDIO ---
         const bgm = document.getElementById('bgm');
         const typeSound = document.getElementById('typeSound');
-        bgm.volume = 0.15; // Zumbido baixo para atmosfera
+        bgm.volume = 0.35; // Zumbido baixo para atmosfera
 
         // Inicia a música ao primeiro clique na tela
         document.body.addEventListener('click', () => {
@@ -95,6 +101,18 @@
         socket.on('output', (data) => {
             term.write(data); 
             term.scrollToBottom(); 
+        });
+
+        // --- NOVO: RECEPTOR DE ÁUDIO DO SERVIDOR ---
+        socket.on('play_audio', (soundId) => {
+            const sfx = document.getElementById('sfx-' + soundId);
+            if (sfx) {
+                sfx.currentTime = 0; // Reseta o som para o início
+                sfx.volume = 0.6;
+                sfx.play().catch(() => {
+                    console.log(`[ÁUDIO] O navegador bloqueou o toque automático do som: ${soundId}`);
+                }); 
+            }
         });
 
         // --- SISTEMA DE INPUT AVANÇADO (SUA LÓGICA MANTIDA INTATA) ---

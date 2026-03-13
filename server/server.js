@@ -4,9 +4,7 @@ const { Server } = require("socket.io");
 const mongoose = require('mongoose');
 const path = require('path');
 
-
 const Player = require('./models/Player');
-const WorldChunk = require('./models/World');
 const parser = require('./logic/commandParser');
 const ascii = require('./logic/asciiLibrary');
 
@@ -17,7 +15,6 @@ const io = new Server(server, { cors: { origin: "*" } });
 // --- CONFIGURAÇÃO ---
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = 'mongodb://127.0.0.1:27017/terminal_wasteland'; 
-
 
 app.use(express.static(path.join(__dirname, '../client')));
 
@@ -44,6 +41,7 @@ setInterval(() => {
 setInterval(() => {
     if (Math.random() > 0.7 && global.mundo.clima === 'LIMPO') {
         global.mundo.clima = 'TEMPESTADE_RAD';
+        io.emit('play_audio', 'alarm'); // Toca sirene!
         io.emit('output', `\r\n\x1b[1;41;37m [ ALERTA METEOROLÓGICO ] TEMPESTADE DE RADIAÇÃO APROXIMA-SE! PROCUREM ABRIGO NUMA BASE IMEDIATAMENTE! \x1b[0m\r\n> `);
         
         setTimeout(() => {
@@ -56,17 +54,8 @@ setInterval(() => {
 // ==========================================
 // WORLD BOSS (EVENTO GLOBAL DE RAID)
 // ==========================================
-global.worldBoss = { 
-    active: false, 
-    name: 'LEVIATÃ DE FERRO', 
-    hp: 0, 
-    maxHp: 5000, 
-    x: 0, 
-    y: 0, 
-    world: 'world_002' 
-};
+global.worldBoss = { active: false, name: 'LEVIATÃ DE FERRO', hp: 0, maxHp: 5000, x: 0, y: 0, world: 'world_002' };
 
-// Verifica a cada 45 minutos se o Boss deve aparecer
 setInterval(() => {
     if (!global.worldBoss.active && Math.random() > 0.7) { 
         global.worldBoss.active = true;
@@ -74,15 +63,61 @@ setInterval(() => {
         global.worldBoss.x = Math.floor(Math.random() * 20) - 10; 
         global.worldBoss.y = Math.floor(Math.random() * 20) - 10; 
 
+        io.emit('play_audio', 'boss'); // Rugido Global
         io.emit('output', `\r\n\x1b[1;41;37m [ ALERTA VERMELHO ] ANOMALIA COLOSSAL DETETADA! \x1b[0m\r\n\x1b[31mO ${global.worldBoss.name} emergiu em [${global.worldBoss.x}, ${global.worldBoss.y}] na área world_002! Juntem-se para o destruir!\x1b[0m\r\n> `);
     }
 }, 45 * 60 * 1000);
+
+// ==========================================
+// COMERCIANTE NÔMADE (MERCADO NEGRO ALEATÓRIO)
+// ==========================================
+global.nomade = { active: false, x: 0, y: 0, world: 'world_001', item: 'sniper', preco: 500, atk: 50 };
+
+setInterval(() => {
+    if (!global.nomade.active && Math.random() > 0.5) {
+        global.nomade.active = true;
+        global.nomade.x = Math.floor(Math.random() * 20) - 10;
+        global.nomade.y = Math.floor(Math.random() * 20) - 10;
+        
+        const itensRaros = [
+            { name: 'sniper', price: 500, atk: 50 }, 
+            { name: 'bomba_nuclear', price: 1000, atk: 0 },
+            { name: 'nucleo_energia', price: 300, atk: 0 }
+        ];
+        const oferta = itensRaros[Math.floor(Math.random() * itensRaros.length)];
+        global.nomade.item = oferta.name;
+        global.nomade.preco = oferta.price;
+        global.nomade.atk = oferta.atk;
+
+        io.emit('play_audio', 'bounty'); // Som de dinheiro/notificação
+        io.emit('output', `\r\n\x1b[1;36m[RÁDIO CLANDESTINA] O Nômade armou a sua tenda de Mercado Negro em [${global.nomade.x}, ${global.nomade.y}]. Ele está vendendo 1x ${global.nomade.item.toUpperCase()}! Corram antes que ele vá embora!\x1b[0m\r\n> `);
+    } else if (global.nomade.active) {
+        global.nomade.active = false;
+        io.emit('output', `\r\n\x1b[33m[RÁDIO CLANDESTINA] O Nômade desmontou a tenda e sumiu na névoa...\x1b[0m\r\n> `);
+    }
+}, 60 * 60 * 1000);
+// ==========================================
+// EVENTO GLOBAL: AIRDROP (SATÉLITE CAÍDO)
+// ==========================================
+global.airdrop = { active: false, x: 0, y: 0, world: 'world_001' };
+
+setInterval(() => {
+    // 40% de chance de cair um satélite a cada 50 minutos
+    if (!global.airdrop.active && Math.random() > 0.6) {
+        global.airdrop.active = true;
+        global.airdrop.x = Math.floor(Math.random() * 30) - 15; 
+        global.airdrop.y = Math.floor(Math.random() * 30) - 15;
+        global.airdrop.world = Math.random() > 0.5 ? 'world_001' : 'world_002';
+
+        io.emit('play_audio', 'alarm'); // Usa o som de sirene para avisar a todos
+        io.emit('output', `\r\n\x1b[1;45;37m [ EVENTO DE SATÉLITE ] UM SATÉLITE COM SUPRIMENTOS CAIU EM [${global.airdrop.x}, ${global.airdrop.y}] NO ${global.airdrop.world.toUpperCase()}! \x1b[0m\r\n\x1b[33mO primeiro clã a chegar e digitar 'saquear satelite' levará todo o loot épico!\x1b[0m\r\n> `);
+    }
+}, 50 * 60 * 1000);
 
 // --- LÓGICA DO SOCKET.IO (Tempo Real) ---
 io.on('connection', (socket) => {
     console.log(`[CONN] Nova conexão: ${socket.id}`);
 
-    
     socket.emit('output', '\x1b[1;32m[SYSTEM] Inicializando BIOS do Terminal...\r\n[==        ] 20%\r\n\x1b[0m');
     
     setTimeout(() => {
@@ -101,20 +136,15 @@ io.on('connection', (socket) => {
         ];
         socket.emit('output', '\x1b[1;32m[==========] 100% - OK.\r\n\x1b[0m' + '\x1b[1;32m' + ascii.drawBox("TERMINAL WASTELAND OS v1.0", welcomeLines) + '\x1b[0m> ');
     }, 1200);
+
     let currentPlayer = null;
 
-    
     socket.on('command', async (cmdString) => {
         const output = [];
-        
         output.push(`\r\n> ${cmdString}`); 
-
         const args = cmdString.trim().split(' ');
         const command = args[0].toLowerCase();
 
-        // ==========================================
-        // LÓGICA DE REGISTRO (COM KIT INICIAL)
-        // ==========================================
         if (command === 'registrar') {
             const username = args[1];
             const password = args[2];
@@ -127,38 +157,21 @@ io.on('connection', (socket) => {
                     if (existe) {
                         output.push(`[ERRO] O nome '${username}' já está em uso.`);
                     } else {
-                        
                         currentPlayer = new Player({ 
-                            username, 
-                            password, 
-                            socketId: socket.id,
-                            inventory: {
-                                metal_base: 10,    
-                                circuitos: 0,
-                                agua_pura: 2,      
-                                bombas: 0
-                            }
+                            username, password, socketId: socket.id,
+                            inventory: { metal_base: 10, circuitos: 0, agua_pura: 2, bombas: 0 }
                         });
                         await currentPlayer.save();
-
-                        if (typeof adminLog === 'function') {
-                            adminLog('CONEXAO', `Novo sobrevivente: ${username} registado com Kit Inicial.`);
-                        }
-
+                        if (typeof adminLog === 'function') adminLog('CONEXAO', `Novo sobrevivente: ${username} registado com Kit Inicial.`);
                         output.push(`\x1b[32m[SISTEMA] Registo concluído! Bem-vindo(a) ao Wasteland, ${username}.\x1b[0m`);
                         output.push(`\x1b[35m[BÔNUS] Você recebeu 10x Sucata e 2x Água Pura como Kit Inicial!\x1b[0m`);
-                        
                         socket.broadcast.emit('output', `\r\n[RÁDIO] Um novo sobrevivente (${username}) juntou-se à rede.\r\n> `);
                     }
                 } catch (err) {
                     output.push(`[ERRO] Falha no registo: ${err.message}`);
                 }
             }
-        }
-        
-        // ==========================================
-        // LÓGICA DE LOGIN
-        // ==========================================
+        } 
         else if (command === 'login') {
             const username = args[1];
             const password = args[2];
@@ -174,15 +187,10 @@ io.on('connection', (socket) => {
                         output.push(`\x1b[31m[ERRO] Senha incorreta. Acesso negado.\x1b[0m`);
                     } else {
                         if (!player.password) player.password = password;
-                        
                         player.socketId = socket.id;
                         await player.save();
                         currentPlayer = player;
-
-                        if (typeof adminLog === 'function') {
-                            adminLog('CONEXAO', `Jogador ${username} fez login.`);
-                        }
-
+                        if (typeof adminLog === 'function') adminLog('CONEXAO', `Jogador ${username} fez login.`);
                         output.push(`\x1b[32m[SISTEMA] Autenticação confirmada. Bem-vindo de volta, ${username}.\x1b[0m`);
                     }
                 } catch (err) {
@@ -190,14 +198,8 @@ io.on('connection', (socket) => {
                 }
             }
         } 
-        
-        // ==========================================
-        // LÓGICA DE COMANDOS DO JOGO (PARSER)
-        // ==========================================
         else if (currentPlayer) {
-        
             currentPlayer = await Player.findById(currentPlayer._id);
-            
             const result = await parser.process(currentPlayer, command, args, io);
             output.push(result.text);
             currentPlayer = result.playerData; 
@@ -205,7 +207,6 @@ io.on('connection', (socket) => {
         else {
             output.push(`[AVISO] Você precisa fazer 'login <nome>' primeiro.`);
         }
-
 
         socket.emit('output', output.join('\r\n') + '\r\n> ');
     });
@@ -225,7 +226,6 @@ server.listen(PORT, () => {
 function adminLog(tipo, mensagem) {
     const agora = new Date().toLocaleTimeString();
     let cor = "\x1b[37m"; 
-
     switch(tipo) {
         case 'CONEXAO': cor = "\x1b[32m"; break; 
         case 'COMBATE': cor = "\x1b[31m"; break; 
@@ -233,8 +233,6 @@ function adminLog(tipo, mensagem) {
         case 'ADMIN':   cor = "\x1b[35m"; break; 
         case 'SISTEMA': cor = "\x1b[36m"; break; 
     }
-
     console.log(`${cor}[${agora}] [${tipo}] ${mensagem}\x1b[0m`);
 }
-
 global.adminLog = adminLog;

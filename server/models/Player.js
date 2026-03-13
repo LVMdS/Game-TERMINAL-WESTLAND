@@ -26,6 +26,7 @@ const PlayerSchema = new mongoose.Schema({
         circuitos: { type: Number, default: 0 },
         agua_pura: { type: Number, default: 2 },
         bombas: { type: Number, default: 0 },
+        minas: { type: Number, default: 0 },
         nucleo_energia: { type: Number, default: 0 },
         holofita_01: { type: Number, default: 0 },
         camera: { type: Number, default: 0 },
@@ -33,10 +34,10 @@ const PlayerSchema = new mongoose.Schema({
         cofre_fechado: { type: Number, default: 0 },
         bio_chips: { type: Number, default: 0 } 
     },
-    
+
     implants: {
         pernas: { type: Boolean, default: false }, 
-        optica: { type: Boolean, default: false },
+        optica: { type: Boolean, default: false }, 
         exoesqueleto: { type: Boolean, default: false } 
     },
 
