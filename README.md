@@ -60,7 +60,7 @@ O jogo foi projetado para rodar localmente em sua máquina, sendo 100% blindado 
 Abra seu navegador em http://localhost:3000, e siga as instruções de registro ou login.
 
 
-## Comandos Básicos
+## 📜 Comandos Básicos
 | Comando | Descrição |
 | :--- | :--- |
 | `registrar <nome> <senha>` | Cria sua conta no Mainframe (Você ganha um Kit Inicial!). |
@@ -71,8 +71,7 @@ Abra seu navegador em http://localhost:3000, e siga as instruções de registro 
 | `norte`, `sul`, `leste`, `oeste` | Movimenta seu personagem pelo mapa da Zona Morta. |
 | `mapa` | Abre o radar local mostrando escombros e bases próximas. |
 
-## Comandos Avançados
-## ⚙️ Comandos Avançados (V2.2)
+## ⚙️ Comandos Avançados
 
 | Comando | Descrição |
 | :--- | :--- |
