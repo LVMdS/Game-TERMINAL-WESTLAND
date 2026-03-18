@@ -71,4 +71,20 @@ Abra seu navegador em http://localhost:3000, e siga as instruções de registro 
 | `norte`, `sul`, `leste`, `oeste` | Movimenta seu personagem pelo mapa da Zona Morta. |
 | `mapa` | Abre o radar local mostrando escombros e bases próximas. |
 
+## Comandos Avançados
+## ⚙️ Comandos Avançados (V2.2)
+
+| Comando | Descrição |
+| :--- | :--- |
+| `construir [tipo]` | Constrói estruturas (`base`, `extrator`, `forja`, `garagem`, `moto`). |
+| `base [ação]` | Gere a tua base (`status`, `recolher`, `depositar [item]`, `sacar [item]`). |
+| `melhorar arma` | Aprimora o dano da tua arma (requer uma Forja construída na base). |
+| `craft [item]` | Fabrica itens de sobrevivência (`faca`, `bomba`, `mina`, `drone`, `estimulante`). |
+| `usar [item]` | Consome um item do inventário (ex: `agua_pura`, `estimulante`, `cofre_dourado`). |
+| `apostar [valor]` | Aposta sucata na roleta do Cassino (disponível apenas nas coordenadas [0,0]). |
+| `saquear satelite` | Recolhe o airdrop global quando um satélite cai na tua zona. |
+| `domesticar cao` | Salva um filhote ferido durante a exploração (requer Água e Estimulante). |
+| `acelerar [direção]` | Usa a Moto-Sucata e 1 Núcleo de Energia para avançar 3 casas rapidamente. |
+| `entrar bunker` | Inicia o evento de Masmorra com ondas de inimigos Elite (em coordenadas secretas). |
+
 **"A humanidade precisa de sucata. O terminal está esperando por você." - Desenvolvido por Leonardo De Souza.**
