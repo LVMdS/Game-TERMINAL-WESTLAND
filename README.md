@@ -66,6 +66,11 @@ Se você deseja rodar o seu próprio servidor de Terminal Wasteland:
         npm install
     ```
 
+    **Rode o servidor**
+    ```bash
+        node server/server.js
+    ```
+
 **inicie o Banco de Dados:**
     Certifique-se de que o MongoDB está rodando na sua máquina na porta 27017 (ou configure sua string no server.js).
 

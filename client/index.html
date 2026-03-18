@@ -3,203 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <title>TERMINAL WASTELAND</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.1.0/css/xterm.css" />
+    <link rel="stylesheet" href="xterm.css" />
     <style>
-        body { 
-            background-color: #000; 
-            margin: 0; 
-            padding: 10px; 
-            overflow: hidden; 
-            height: 100vh; 
-            box-sizing: border-box; 
-        }
-        
-        #terminal-container { 
-            width: 100%; 
-            height: 100%; 
-            position: relative;
-            z-index: 1; /* Mantém o terminal abaixo das scanlines */
-        }
-        
-        .xterm-rows { 
-            font-family: 'Courier New', Courier, monospace !important; 
-        }
-
-        /* ==========================================
-           EFEITOS VISUAIS DE IMERSÃO (V1.3)
-           ========================================== */
-        
-        /* Efeito Glow Verde Hacker no texto (Adicionado à sua classe) */
-        .xterm-viewport { 
-            overflow-y: auto !important; 
-            text-shadow: 0 0 5px #00FF00; 
-        }
-
-        /* O Efeito CRT Retro (Scanlines de Monitor Antigo) */
+        body { background-color: #000; margin: 0; padding: 10px; overflow: hidden; height: 100vh; box-sizing: border-box; }
+        #terminal-container { width: 100%; height: 100%; position: relative; z-index: 1; }
+        .xterm-rows { font-family: 'Courier New', Courier, monospace !important; }
+        .xterm-viewport { overflow-y: auto !important; text-shadow: 0 0 5px #00FF00; }
         body::after {
-            content: " ";
-            display: block;
-            position: absolute;
-            top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            z-index: 2;
-            background-size: 100% 2px, 3px 100%;
-            pointer-events: none; /* Permite clicar através do filtro */
+            content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2; background-size: 100% 2px, 3px 100%; pointer-events: none;
         }
     </style>
 </head>
 <body>
-    <audio id="bgm" src="https://cdn.pixabay.com/audio/2022/11/22/audio_d07fa9c8dd.mp3" loop></audio>
-    <audio id="typeSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_78f1e29c62.mp3"></audio>
-
-    <audio id="sfx-alarm" src="https://cdn.pixabay.com/audio/2021/08/04/audio_0625c1539c.mp3"></audio>
-    <audio id="sfx-boss" src="https://cdn.pixabay.com/audio/2022/01/18/audio_8cb0131454.mp3"></audio>
-    <audio id="sfx-mob" src="https://cdn.pixabay.com/audio/2021/08/09/audio_a1a2e3cd8c.mp3"></audio>
-    <audio id="sfx-bounty" src="https://cdn.pixabay.com/audio/2021/08/04/audio_bb630cc098.mp3"></audio>
-    <audio id="sfx-explosion" src="https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73467.mp3"></audio>
+    <audio id="bgm" src="sons/ambiente.mp3" loop></audio>
+    <audio id="typeSound" src="sons/teclado.mp3"></audio>
+    <audio id="sfx-alarm" src="sons/alarme.mp3"></audio>
+    <audio id="sfx-boss" src="sons/boss.mp3"></audio>
+    <audio id="sfx-mob" src="sons/monstro.mp3"></audio>
+    <audio id="sfx-bounty" src="sons/moeda.mp3"></audio>
+    <audio id="sfx-explosion" src="sons/explosao.mp3"></audio>
 
     <div id="terminal-container"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/xterm@5.1.0/lib/xterm.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.7.0/lib/xterm-addon-fit.js"></script>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="xterm.min.js"></script>
+    <script src="xterm-addon-fit.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
 
     <script>
-        // --- CONFIGURAÇÃO DE ÁUDIO ---
         const bgm = document.getElementById('bgm');
         const typeSound = document.getElementById('typeSound');
-        bgm.volume = 0.35; // Zumbido baixo para atmosfera
+        bgm.volume = 0.35; 
 
-        // Inicia a música ao primeiro clique na tela
-        document.body.addEventListener('click', () => {
-            if(bgm.paused) bgm.play();
-        }, { once: true });
-
-        // Função para tocar o som de máquina de escrever
-        function playTypeSound() {
-            const somClack = typeSound.cloneNode();
-            somClack.volume = 0.4;
-            somClack.play().catch(() => {}); 
+        function startAmbientSound() {
+            if(bgm.paused) {
+                let playPromise = bgm.play();
+                if (playPromise !== undefined) playPromise.catch(e => console.log("Aguardando interação."));
+            }
+            window.removeEventListener('click', startAmbientSound);
+            window.removeEventListener('keydown', startAmbientSound);
         }
 
-        // --- INICIALIZAÇÃO DO TERMINAL ---
+        window.addEventListener('click', startAmbientSound, { capture: true });
+        window.addEventListener('keydown', startAmbientSound, { capture: true });
+
+        function playTypeSound() {
+            const somClack = typeSound.cloneNode();
+            somClack.volume = 0.4; somClack.play().catch(() => {}); 
+        }
+
         const term = new Terminal({
             theme: { background: '#000000', foreground: '#00FF00', cursor: '#00FF00', selectionBackground: 'rgba(0, 255, 0, 0.3)' },
             cursorBlink: true, fontFamily: "'Courier New', Courier, monospace", fontSize: 16, convertEol: true
         });
         
         const fitAddon = new FitAddon.FitAddon();
-        term.loadAddon(fitAddon);
-        term.open(document.getElementById('terminal-container'));
-        fitAddon.fit(); 
-        window.addEventListener('resize', () => fitAddon.fit());
-        term.focus();
+        term.loadAddon(fitAddon); term.open(document.getElementById('terminal-container'));
+        fitAddon.fit(); window.addEventListener('resize', () => fitAddon.fit()); term.focus();
 
         const socket = io(); 
 
-        socket.on('output', (data) => {
-            term.write(data); 
-            term.scrollToBottom(); 
-        });
+        socket.on('output', (data) => { term.write(data); term.scrollToBottom(); });
 
-        // --- NOVO: RECEPTOR DE ÁUDIO DO SERVIDOR ---
         socket.on('play_audio', (soundId) => {
             const sfx = document.getElementById('sfx-' + soundId);
-            if (sfx) {
-                sfx.currentTime = 0; // Reseta o som para o início
-                sfx.volume = 0.6;
-                sfx.play().catch(() => {
-                    console.log(`[ÁUDIO] O navegador bloqueou o toque automático do som: ${soundId}`);
-                }); 
-            }
+            if (sfx) { sfx.currentTime = 0; sfx.volume = 0.6; sfx.play().catch(() => {}); }
         });
 
-        // --- SISTEMA DE INPUT AVANÇADO (SUA LÓGICA MANTIDA INTATA) ---
-        let currentInput = '';
-        let commandHistory = [];
-        let historyIndex = 0;
-        let cursorPosition = 0; 
+        let currentInput = ''; let commandHistory = []; let historyIndex = 0; let cursorPosition = 0; 
 
         term.onData(e => {
             if (e === '\r') {
-                playTypeSound(); // Toca o som ao dar Enter
-                socket.emit('command', currentInput);
-                
-                if (currentInput.trim() !== '') {
-                    commandHistory = commandHistory.filter(cmd => cmd !== currentInput);
-                    commandHistory.push(currentInput);
-                    if (commandHistory.length > 3) commandHistory.shift();
-                }
-                
-                historyIndex = commandHistory.length;
-                currentInput = '';
-                cursorPosition = 0;
+                playTypeSound(); socket.emit('command', currentInput);
+                if (currentInput.trim() !== '') { commandHistory = commandHistory.filter(cmd => cmd !== currentInput); commandHistory.push(currentInput); if (commandHistory.length > 3) commandHistory.shift(); }
+                historyIndex = commandHistory.length; currentInput = ''; cursorPosition = 0;
             } 
             else if (e === '\u007F') {
                 if (cursorPosition > 0) {
-                    playTypeSound(); // Toca o som ao apagar
-                    const prefixo = currentInput.slice(0, cursorPosition - 1);
-                    const sufixo = currentInput.slice(cursorPosition);
-                    currentInput = prefixo + sufixo;
-                    cursorPosition--;
-                    
-                    term.write('\b\x1b[K' + sufixo);
+                    playTypeSound(); const prefixo = currentInput.slice(0, cursorPosition - 1); const sufixo = currentInput.slice(cursorPosition);
+                    currentInput = prefixo + sufixo; cursorPosition--; term.write('\b\x1b[K' + sufixo);
                     for (let i = 0; i < sufixo.length; i++) term.write('\x1b[D');
                 }
             } 
-            else if (e === '\x1b[D') { 
-                if (cursorPosition > 0) {
-                    cursorPosition--;
-                    term.write(e); 
-                }
-            }
-            else if (e === '\x1b[C') { 
-                if (cursorPosition < currentInput.length) {
-                    cursorPosition++;
-                    term.write(e); 
-                }
-            }
+            else if (e === '\x1b[D') { if (cursorPosition > 0) { cursorPosition--; term.write(e); } }
+            else if (e === '\x1b[C') { if (cursorPosition < currentInput.length) { cursorPosition++; term.write(e); } }
             else if (e === '\x1b[A') { 
                 if (commandHistory.length > 0 && historyIndex > 0) {
-                    playTypeSound();
-                    for (let i = cursorPosition; i < currentInput.length; i++) term.write('\x1b[C');
-                    for (let i = 0; i < currentInput.length; i++) term.write('\b \b');
-                    
-                    historyIndex--;
-                    currentInput = commandHistory[historyIndex];
-                    cursorPosition = currentInput.length;
-                    term.write(currentInput);
+                    playTypeSound(); for (let i = cursorPosition; i < currentInput.length; i++) term.write('\x1b[C'); for (let i = 0; i < currentInput.length; i++) term.write('\b \b');
+                    historyIndex--; currentInput = commandHistory[historyIndex]; cursorPosition = currentInput.length; term.write(currentInput);
                 }
             } 
             else if (e === '\x1b[B') { 
                 if (historyIndex < commandHistory.length) {
-                    playTypeSound();
-                    for (let i = cursorPosition; i < currentInput.length; i++) term.write('\x1b[C');
-                    for (let i = 0; i < currentInput.length; i++) term.write('\b \b');
-                    
-                    historyIndex++;
-                    if (historyIndex === commandHistory.length) {
-                        currentInput = '';
-                    } else {
-                        currentInput = commandHistory[historyIndex];
-                        term.write(currentInput);
-                    }
-                    cursorPosition = currentInput.length;
+                    playTypeSound(); for (let i = cursorPosition; i < currentInput.length; i++) term.write('\x1b[C'); for (let i = 0; i < currentInput.length; i++) term.write('\b \b');
+                    historyIndex++; if (historyIndex === commandHistory.length) currentInput = ''; else { currentInput = commandHistory[historyIndex]; term.write(currentInput); } cursorPosition = currentInput.length;
                 }
             } 
             else { 
                 if (e >= String.fromCharCode(0x20) && e <= String.fromCharCode(0x7E)) {
-                    playTypeSound(); // Toca som ao digitar letras e números normais
-                    const prefixo = currentInput.slice(0, cursorPosition);
-                    const sufixo = currentInput.slice(cursorPosition);
-                    currentInput = prefixo + e + sufixo;
-                    cursorPosition++;
-                    
-                    term.write(e + sufixo);
-                    for (let i = 0; i < sufixo.length; i++) {
-                        term.write('\x1b[D');
-                    }
+                    playTypeSound(); const prefixo = currentInput.slice(0, cursorPosition); const sufixo = currentInput.slice(cursorPosition);
+                    currentInput = prefixo + e + sufixo; cursorPosition++; term.write(e + sufixo);
+                    for (let i = 0; i < sufixo.length; i++) term.write('\x1b[D');
                 }
             }
         });
