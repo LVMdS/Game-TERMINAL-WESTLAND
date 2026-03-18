@@ -61,14 +61,15 @@ Abra seu navegador em http://localhost:3000, e siga as instruções de registro 
 
 
 ## Comandos Básicos
-Comando,Descrição
-registrar <nome> <senha>,Cria sua conta no Mainframe (Você ganha um Kit Inicial!).
-login <nome> <senha>,Acessa seu personagem salvo.
-ajuda,Mostra a lista completa de comandos disponíveis.
-status,"Exibe seus atributos, HP, Energia, inventário e GPS."
-explorar,Gasta energia para procurar loot ou enfrentar inimigos.
-"norte, sul, leste, oeste",Movimenta seu personagem pelo mapa da Zona Morta.
-mapa,Abre o radar local mostrando escombros e bases próximas.
+          Comando                                              Descrição
+          
+registrar <nome> <senha>         ->         Cria sua conta no Mainframe (Você ganha um Kit Inicial!).
+login <nome> <senha>             ->         Acessa seu personagem salvo.
+ajuda                            ->         Mostra a lista completa de comandos disponíveis.
+status                           ->         "Exibe seus atributos, HP, Energia, inventário e GPS."
+explorar                         ->         Gasta energia para procurar loot ou enfrentar inimigos.
+"norte, sul, leste, oeste"       ->         Movimenta seu personagem pelo mapa da Zona Morta.
+mapa                             ->         Abre o radar local mostrando escombros e bases próximas.
 
 
 **"A humanidade precisa de sucata. O terminal está esperando por você." - Desenvolvido por Leonardo De Souza.**
